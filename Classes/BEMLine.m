@@ -186,20 +186,12 @@
         }
         CGPoint newPoint = CGPointMake(xIndexScale * i, value);
         [self.points addObject:[NSValue valueWithCGPoint:newPoint]];
-  }
-
-    if (!self.disableMainLine && self.bezierCurveIsEnabled) {
-        line = [BEMLine quadCurvedPathWithPoints:self.points open:YES];
-        fillBottom = [BEMLine quadCurvedPathWithPoints:self.bottomPointsArray open:NO];
-        fillTop = [BEMLine quadCurvedPathWithPoints:self.topPointsArray open:NO];
-    } else if (!self.disableMainLine && !self.bezierCurveIsEnabled) {
-        line = [BEMLine linesToPoints:self.points open:YES];
-        fillBottom = [BEMLine linesToPoints:self.bottomPointsArray open:NO];
-        fillTop = [BEMLine linesToPoints:self.topPointsArray open:NO];
-    } else {
-        fillBottom = [BEMLine linesToPoints:self.bottomPointsArray open:NO];
-        fillTop = [BEMLine linesToPoints:self.topPointsArray open:NO];
     }
+    if (!self.disableMainLine) {
+        line = [BEMLine pathWithPoints:self.points curved:self.bezierCurveIsEnabled open:YES];
+    }
+    fillBottom = [BEMLine pathWithPoints:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];
+    fillTop    = [BEMLine pathWithPoints:self.topPointsArray    curved:self.bezierCurveIsEnabled open:NO];
 
     //----------------------------//
     //----- Draw Fill Colors -----//
@@ -341,7 +333,7 @@
     return bottomPoints;
 }
 
-+ (UIBezierPath *)linesToPoints:(NSArray <NSValue *> *)points open:(BOOL) canSkipPoints {
++ (UIBezierPath *)pathWithPoints:(NSArray <NSValue *> *)points curved:(BOOL) curved open:(BOOL) canSkipPoints {
     UIBezierPath *path = [UIBezierPath bezierPath];
     NSValue *value = points[0];
     CGPoint p1 = [value CGPointValue];
@@ -353,31 +345,12 @@
 
         if (canSkipPoints && (p1.y >= BEMNullGraphValue || p2.y >= BEMNullGraphValue)) {
             [path moveToPoint:p2];
-        } else {
-            [path addLineToPoint:p2];
-        }
-        p1 = p2;
-    }
-    return path;
-}
-
-+ (UIBezierPath *)quadCurvedPathWithPoints:(NSArray <NSValue *> *)points open:(BOOL) canSkipPoints {
-    UIBezierPath *path = [UIBezierPath bezierPath];
-
-    NSValue *value = points[0];
-    CGPoint p1 = [value CGPointValue];
-    [path moveToPoint:p1];
-
-    for (NSValue * point in points) {
-        if (point == value) continue; //already at first point
-        CGPoint p2 = [point CGPointValue];
-
-        if (canSkipPoints && (p1.y >= BEMNullGraphValue || p2.y >= BEMNullGraphValue)) {
-            [path moveToPoint:p2];
-        } else {
+        } else if (curved) {
             CGPoint midPoint = midPointForPoints(p1, p2);
             [path addQuadCurveToPoint:midPoint controlPoint:controlPointForPoints(midPoint, p1)];
             [path addQuadCurveToPoint:p2 controlPoint:controlPointForPoints(midPoint, p2)];
+        } else {
+            [path addLineToPoint:p2];
         }
         p1 = p2;
     }
