@@ -73,7 +73,7 @@
         } else {
             [self.arrayOfDates addObject:[self dateForGraphAfterDate:self.arrayOfDates[i-1]]]; // Dates for the X-Axis of the graph
         }
-        if (showNullValue && (i % 4 == 0)) {
+        if (showNullValue && (i % 6 == 0)) {
             self.arrayOfValues[i] = @(BEMNullGraphValue);
         } else {
             self.totalNumber = self.totalNumber + [[self.arrayOfValues objectAtIndex:i] intValue]; // All of the values added together
@@ -121,7 +121,7 @@
 - (void) addPointToGraph {
     // Add point
     NSNumber * newValue ;
-    if (self.arrayOfValues.count % 4 == 0) {
+    if (self.arrayOfValues.count % 6 == 0) {
         newValue = @(BEMNullGraphValue);
     } else {
         newValue = @([self getRandomFloat]);

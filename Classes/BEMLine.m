@@ -188,10 +188,10 @@
         [self.points addObject:[NSValue valueWithCGPoint:newPoint]];
     }
     if (!self.disableMainLine) {
-        line = [BEMLine pathWithPoints:self.points curved:self.bezierCurveIsEnabled open:YES];
+        line = [BEMLine pathWithPoints2:self.points curved:self.bezierCurveIsEnabled open:YES];
     }
-    fillBottom = [BEMLine pathWithPoints:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];
-    fillTop    = [BEMLine pathWithPoints:self.topPointsArray    curved:self.bezierCurveIsEnabled open:NO];
+    fillBottom = [BEMLine pathWithPoints2:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];
+    fillTop    = [BEMLine pathWithPoints2:self.topPointsArray    curved:self.bezierCurveIsEnabled open:NO];
 
     //----------------------------//
     //----- Draw Fill Colors -----//
@@ -372,6 +372,122 @@ static CGPoint controlPointForPoints(CGPoint p1, CGPoint p2) {
     else if (p1.y > p2.y)
         controlPoint.y -= diffY;
 
+    return controlPoint;
+}
+//Second algorithm
+
+
++ (UIBezierPath *)pathWithPoints2:(NSArray <NSValue *> *)points curved:(BOOL) curved open:(BOOL) open {
+    //based on Roman Filippov code: http://stackoverflow.com/a/40203583/580850
+    //open means allow gaps in path.
+    //Also, if not open, then first/last points are for frame, and should not affect curve.
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    CGPoint p1 = [points[0] CGPointValue];
+    NSUInteger dataStart = open ? 1 : 2;
+    NSUInteger dataEnd = points.count-(open ? 1 : 2);
+    [path moveToPoint:p1];
+    if (!open) {
+        //skip first point (not data)
+        dataStart = 2;
+        p1 = [points[1] CGPointValue];
+        [path addLineToPoint:p1];
+    }
+    CGPoint oldControlPoint = p1;
+    for (NSUInteger pointIndex = dataStart; pointIndex< points.count; pointIndex++) {
+        CGPoint p2 = [points[pointIndex]  CGPointValue];
+
+        if (p1.y >= BEMNullGraphValue || p2.y >= BEMNullGraphValue) {
+            if (open) {
+                [path moveToPoint:p2];
+            } else {
+                [path addLineToPoint:p2];
+            }
+            oldControlPoint = p2;
+        } else if (curved ) {
+            CGPoint p3 = CGPointZero;
+                //Don't let frame points beyond actual data affect curve.
+            if (pointIndex < dataEnd) p3 = [points[pointIndex+1] CGPointValue] ;
+            if (p3.y >= BEMNullGraphValue) p3 = CGPointZero;
+            CGPoint newControlPoint = controlPointForPoints2(p1, p2, p3);
+            if (!CGPointEqualToPoint( newControlPoint, CGPointZero)) {
+                [path addCurveToPoint: p2 controlPoint1:oldControlPoint controlPoint2: newControlPoint];
+                oldControlPoint = imaginForPoints( newControlPoint,  p2);
+            } else {
+                [path addCurveToPoint: p2 controlPoint1:oldControlPoint controlPoint2: p2];
+                oldControlPoint = p2;
+            }
+        } else {
+            [path addLineToPoint:p2];
+            oldControlPoint = p2;
+        }
+        p1 = p2;
+    }
+    NSLog(@"path: %@",path);
+    return path;
+}
+
+static CGPoint imaginForPoints(CGPoint point, CGPoint center) {
+    if (CGPointEqualToPoint(point, CGPointZero) || CGPointEqualToPoint(center, CGPointZero)) {
+        return CGPointZero;
+    }
+    CGFloat newX = 2 * center.x - point.x;
+    CGFloat diffY = fabs(point.y - center.y);
+    if (isinf(diffY)) {
+        return CGPointMake(newX, BEMNullGraphValue);
+    }
+    CGFloat newY = center.y + diffY * (point.y < center.y ? 1 : -1);
+
+    return CGPointMake(newX,newY);
+}
+
+static CGPoint controlPointForPoints2(CGPoint p1, CGPoint p2, CGPoint p3) {
+    if (CGPointEqualToPoint(p3, CGPointZero)) return CGPointZero;
+    CGPoint leftMidPoint = midPointForPoints(p1, p2);
+    CGPoint rightMidPoint = midPointForPoints(p2, p3);
+    CGPoint imaginPoint = imaginForPoints(rightMidPoint, p2);
+    CGPoint controlPoint = midPointForPoints(leftMidPoint, imaginPoint);
+
+
+    if (p1.y < p2.y) {
+        if (controlPoint.y < p1.y) {
+            controlPoint.y = p1.y;
+        }
+        if (controlPoint.y > p2.y) {
+            controlPoint.y = p2.y;
+        }
+    } else {
+        if (controlPoint.y > p1.y) {
+            controlPoint.y = p1.y;
+        }
+        if (controlPoint.y < p2.y) {
+            controlPoint.y = p2.y;
+        }
+    }
+
+    CGPoint imaginContol = imaginForPoints(controlPoint, p2);
+
+    if (p2.y < p3.y) {
+        if (imaginContol.y < p2.y) {
+            controlPoint.y = p2.y;
+        } else if (imaginContol.y > p3.y) {
+            CGFloat diffY = p3.y - p2.y;
+            controlPoint.y = p2.y - diffY;
+        }
+    } else {
+        if (imaginContol.y > p2.y) {
+            controlPoint.y = p2.y;
+        } else if (imaginContol.y < p3.y) {
+            CGFloat diffY = p2.y - p3.y;
+            controlPoint.y = p2.y + diffY;
+        }
+    }
+//    NSLog(@"LM:%@, RM:%@, IP:%@, IC: %@, CP2:%@",
+//          NSStringFromCGPoint(leftMidPoint),
+//          NSStringFromCGPoint(rightMidPoint),
+//          NSStringFromCGPoint(imaginPoint),
+//          NSStringFromCGPoint(imaginContol),
+//          NSStringFromCGPoint(controlPoint)
+//          );
     return controlPoint;
 }
 
