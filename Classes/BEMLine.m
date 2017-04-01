@@ -190,8 +190,9 @@
     if (!self.disableMainLine) {
         line = [BEMLine pathWithPoints2:self.points curved:self.bezierCurveIsEnabled open:YES];
     }
-    fillBottom = [BEMLine pathWithPoints2:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];
-    fillTop    = [BEMLine pathWithPoints2:self.topPointsArray    curved:self.bezierCurveIsEnabled open:NO];
+    //Temporarily leave background on quadratic to compare results
+    fillBottom = [BEMLine pathWithPoints:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];
+    fillTop    = [BEMLine pathWithPoints:self.topPointsArray    curved:self.bezierCurveIsEnabled open:NO];
 
     //----------------------------//
     //----- Draw Fill Colors -----//
@@ -422,22 +423,29 @@ static CGPoint controlPointForPoints(CGPoint p1, CGPoint p2) {
         }
         p1 = p2;
     }
-    NSLog(@"path: %@",path);
     return path;
 }
 
 static CGPoint imaginForPoints(CGPoint point, CGPoint center) {
+    //returns "mirror image" of point: the point that is symmetrical through center.
     if (CGPointEqualToPoint(point, CGPointZero) || CGPointEqualToPoint(center, CGPointZero)) {
         return CGPointZero;
     }
-    CGFloat newX = 2 * center.x - point.x;
-    CGFloat diffY = fabs(point.y - center.y);
-    if (isinf(diffY)) {
-        return CGPointMake(newX, BEMNullGraphValue);
+    CGFloat newX = center.x + (center.x-point.x);
+    CGFloat newY = center.y + (center.y-point.y);
+    if (isinf(newY)) {
+        newY = BEMNullGraphValue;
     }
-    CGFloat newY = center.y + diffY * (point.y < center.y ? 1 : -1);
-
     return CGPointMake(newX,newY);
+}
+
+static CGFloat clamp(CGFloat num, CGFloat bounds1, CGFloat bounds2) {
+    //ensure num is between bounds.
+    if (bounds1 < bounds2) {
+        return MIN(MAX(bounds1,num),bounds2);
+    } else {
+        return MIN(MAX(bounds2,num),bounds1);
+    }
 }
 
 static CGPoint controlPointForPoints2(CGPoint p1, CGPoint p2, CGPoint p3) {
@@ -447,47 +455,12 @@ static CGPoint controlPointForPoints2(CGPoint p1, CGPoint p2, CGPoint p3) {
     CGPoint imaginPoint = imaginForPoints(rightMidPoint, p2);
     CGPoint controlPoint = midPointForPoints(leftMidPoint, imaginPoint);
 
+    controlPoint.y = clamp(controlPoint.y, p1.y, p2.y);
 
-    if (p1.y < p2.y) {
-        if (controlPoint.y < p1.y) {
-            controlPoint.y = p1.y;
-        }
-        if (controlPoint.y > p2.y) {
-            controlPoint.y = p2.y;
-        }
-    } else {
-        if (controlPoint.y > p1.y) {
-            controlPoint.y = p1.y;
-        }
-        if (controlPoint.y < p2.y) {
-            controlPoint.y = p2.y;
-        }
-    }
+    CGFloat flippedP3 = p2.y + (p2.y-p3.y);
 
-    CGPoint imaginContol = imaginForPoints(controlPoint, p2);
+    controlPoint.y = clamp(controlPoint.y, p2.y, flippedP3);
 
-    if (p2.y < p3.y) {
-        if (imaginContol.y < p2.y) {
-            controlPoint.y = p2.y;
-        } else if (imaginContol.y > p3.y) {
-            CGFloat diffY = p3.y - p2.y;
-            controlPoint.y = p2.y - diffY;
-        }
-    } else {
-        if (imaginContol.y > p2.y) {
-            controlPoint.y = p2.y;
-        } else if (imaginContol.y < p3.y) {
-            CGFloat diffY = p2.y - p3.y;
-            controlPoint.y = p2.y + diffY;
-        }
-    }
-//    NSLog(@"LM:%@, RM:%@, IP:%@, IC: %@, CP2:%@",
-//          NSStringFromCGPoint(leftMidPoint),
-//          NSStringFromCGPoint(rightMidPoint),
-//          NSStringFromCGPoint(imaginPoint),
-//          NSStringFromCGPoint(imaginContol),
-//          NSStringFromCGPoint(controlPoint)
-//          );
     return controlPoint;
 }
 
