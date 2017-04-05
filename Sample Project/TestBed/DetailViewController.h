@@ -26,6 +26,10 @@
 @property (assign, nonatomic)  BOOL      testAlwaysDisplayPopup;
 @property (assign, nonatomic)  CGFloat   maxValue;
 @property (assign, nonatomic)  CGFloat   minValue;
+@property (assign, nonatomic)  CGFloat   maxXValue;
+@property (assign, nonatomic)  CGFloat   minXValue;
+@property (assign, nonatomic)  BOOL      variableXAxis;
+@property (assign, nonatomic)  NSUInteger numberofXAxisLabels;
 @property (assign, nonatomic)  BOOL      noDataLabel;
 @property (strong, nonatomic)  NSString *noDataText;
 @property (assign, nonatomic)  CGFloat   staticPaddingValue;

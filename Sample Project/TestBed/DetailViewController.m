@@ -21,8 +21,9 @@
 @property (strong, nonatomic) IBOutlet UILabel *labelValues;
 @property (strong, nonatomic) IBOutlet UILabel *labelDates;
 
+@property (strong, nonatomic) NSDate * oldestDate, * newestDate;
 @property (nonatomic) NSInteger totalNumber;
-
+@property (strong, nonatomic) NSDateFormatter * dateFormatter;
 @property (strong, nonatomic) IBOutlet UIView * customView;
 @property (weak, nonatomic) IBOutlet UILabel * customViewLabel;
 @end
@@ -36,6 +37,8 @@
 
     self.maxValue = -1.0;
     self.minValue = -1.0;
+    self.maxXValue = -1.0;
+    self.minXValue = -1.0;
     self.staticPaddingValue = -1.0;
     self.numberOfGapsBetweenLabels = NSNotFound;
     self.baseIndexForXAxis = NSNotFound;
@@ -43,8 +46,13 @@
     self.numberOfYAxisLabels = NSNotFound;
     self.baseValueForYAxis = -1.0;
     self.incrementValueForYAxis = -1.0;
+    self.dateFormatter =   [[NSDateFormatter alloc] init];
+    self.dateFormatter.dateFormat = @"MM/dd:HH";
+    self.variableXAxis = NO;
+
     // Do any additional setup after loading the view.
 
+    self.graphObjectIncrement.value = 9;
 
     [self hydrateDatasets];
 
@@ -60,30 +68,32 @@
     [self.arrayOfDates removeAllObjects];
 
     self.totalNumber = 0;
-    NSDate *baseDate = [NSDate date];
+    NSDate *date = [NSDate date];
     BOOL showNullValue = YES;
-    self.graphObjectIncrement.value = 9;
     self.previousStepperValue = self.graphObjectIncrement.value;
+    self.oldestDate = [NSDate distantFuture];
+    self.newestDate = [NSDate distantPast];
 
     // Add objects to the array based on the stepper value
-    for (int i = 0; i < 9; i++) {
-        [self.arrayOfValues addObject:@([self getRandomFloat])]; // Random values for the graph
-        if (i == 0) {
-            [self.arrayOfDates addObject:baseDate]; // Dates for the X-Axis of the graph
+    for (int i = 0; i < self.graphObjectIncrement.value; i++) {
+        if (showNullValue && (i % 8 == 0)) {
+            [self.arrayOfValues addObject: @(BEMNullGraphValue)];
         } else {
-            [self.arrayOfDates addObject:[self dateForGraphAfterDate:self.arrayOfDates[i-1]]]; // Dates for the X-Axis of the graph
-        }
-        if (showNullValue && (i % 4 == 0)) {
-            self.arrayOfValues[i] = @(BEMNullGraphValue);
-        } else {
+            [self.arrayOfValues addObject:@([self getRandomFloat])]; // Random values for the graph
             self.totalNumber = self.totalNumber + [[self.arrayOfValues objectAtIndex:i] intValue]; // All of the values added together
         }
-
+       [self.arrayOfDates addObject:date]; // Dates for the X-Axis of the graph
+        date = [self dateForGraphAfterDate:date];
+        self.oldestDate = [self.oldestDate earlierDate:date];
+        self.newestDate = [self.newestDate laterDate:date];
     }
+    NSLog(@"dates: %@",self.arrayOfDates);
+    NSLog(@"values: %@",self.arrayOfValues);
 }
 
 - (NSDate *)dateForGraphAfterDate:(NSDate *)date {
-    NSTimeInterval secondsInTwentyFourHours = 24 * 60 * 60;
+    NSInteger numDays =  (NSInteger)(arc4random() % 6) +1 ;
+    NSTimeInterval secondsInTwentyFourHours = 24 * 60 * 60 * numDays;
     NSDate *newDate = [date dateByAddingTimeInterval:secondsInTwentyFourHours];
     return newDate;
 }
@@ -144,7 +154,6 @@
 -(NSString *) formatNumber: (NSNumber *) number {
     return [NSNumberFormatter localizedStringFromNumber:number
                                                          numberStyle:NSNumberFormatterDecimalStyle];
-
 }
 
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
@@ -174,6 +183,15 @@
     return [[self.arrayOfValues objectAtIndex:index] doubleValue];
 }
 
+-(NSInteger) numberOfXAxisLabelsOnLineGraph: graph {
+    return self.numberofXAxisLabels;
+}
+
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSUInteger)index {
+
+    return [[self.arrayOfDates objectAtIndex:index] timeIntervalSince1970];
+}
+
 #pragma mark - SimpleLineGraph Delegate
 
 -(BOOL) respondsToSelector:(SEL)aSelector {
@@ -189,6 +207,14 @@
         return self.maxValue >= 0.0;
     } else if (aSelector == @selector(minValueForLineGraph:)) {
         return self.minValue >= 0.0;
+    } else if (aSelector == @selector(maxXValueForLineGraph:)) {
+        return self.maxXValue >= 0.0;
+    } else if (aSelector == @selector(minXValueForLineGraph:)) {
+        return self.minXValue >= 0.0;
+    } else if (aSelector == @selector(lineGraph:locationForPointAtIndex:)) {
+        return self.variableXAxis;
+    } else if (aSelector == @selector(numberOfXAxisLabelsOnLineGraph:)) {
+        return self.numberofXAxisLabels > 0;
     } else if (aSelector == @selector(noDataLabelTextForLineGraph:)) {
         return self.noDataText.length > 0;
     } else if (aSelector == @selector(staticPaddingForLineGraph:)) {
@@ -222,9 +248,17 @@
 
 
 - (NSString *)lineGraph:(BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index {
-    NSString *label = [self labelForDateAtIndex:index];
+    NSDate *date = self.arrayOfDates[index];
+    NSString *label = [self.dateFormatter stringFromDate:date];
     return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
 }
+
+- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location {
+    NSDate *date = [NSDate dateWithTimeIntervalSince1970:location];
+    NSString *label = [self.dateFormatter stringFromDate:date];
+    return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
+}
+
 
 - (NSString *)popUpSuffixForlineGraph:(BEMSimpleLineGraphView *)graph {
     return self.popUpSuffix;
@@ -299,13 +333,20 @@
 
 - (NSArray <NSNumber *> *)incrementPositionsForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph {
     NSMutableArray * positions = [NSMutableArray array];
-    NSUInteger index = 1;
-    while (index < self.arrayOfValues.count) {
+    for (NSUInteger index = 0; index < self.arrayOfValues.count; index++ ) {
         if (arc4random() % 4 == 0) [positions addObject:@(index)];
-        index +=1;
     }
     return positions;
 }
+
+- (CGFloat)maxXValueForLineGraph:(BEMSimpleLineGraphView *)graph {
+    return self.maxXValue;
+}
+
+- (CGFloat)minXValueForLineGraph:(BEMSimpleLineGraphView *)graph {
+    return self.minXValue;
+}
+
 
 //----- Y AXIS -----//
 

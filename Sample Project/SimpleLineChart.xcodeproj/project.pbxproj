@@ -31,6 +31,7 @@
 		1E960B191E7F9C80000E2BB8 /* MSSliderView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E960B0D1E7F9C80000E2BB8 /* MSSliderView.m */; };
 		1E960B1A1E7F9C80000E2BB8 /* MSThumbView.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E960B0F1E7F9C80000E2BB8 /* MSThumbView.m */; };
 		1E960B1B1E7F9C80000E2BB8 /* UIControl+HitTestEdgeInsets.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E960B111E7F9C80000E2BB8 /* UIControl+HitTestEdgeInsets.m */; };
+		1EA1648A1E9433FD00D77C4A /* NSUserDefaults+Color.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EA164891E9433FD00D77C4A /* NSUserDefaults+Color.m */; };
 		99B15643187B412400B24591 /* StatsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 99B15642187B412400B24591 /* StatsViewController.m */; };
 		99B3FA3A1877898B00539A7B /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 99B3FA381877898B00539A7B /* LICENSE */; };
 		99B3FA3B1877898B00539A7B /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 99B3FA391877898B00539A7B /* README.md */; };
@@ -106,6 +107,8 @@
 		1E960B0F1E7F9C80000E2BB8 /* MSThumbView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MSThumbView.m; sourceTree = "<group>"; };
 		1E960B101E7F9C80000E2BB8 /* UIControl+HitTestEdgeInsets.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIControl+HitTestEdgeInsets.h"; sourceTree = "<group>"; };
 		1E960B111E7F9C80000E2BB8 /* UIControl+HitTestEdgeInsets.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIControl+HitTestEdgeInsets.m"; sourceTree = "<group>"; };
+		1EA164881E9433FD00D77C4A /* NSUserDefaults+Color.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSUserDefaults+Color.h"; sourceTree = "<group>"; };
+		1EA164891E9433FD00D77C4A /* NSUserDefaults+Color.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSUserDefaults+Color.m"; sourceTree = "<group>"; };
 		99B15641187B412400B24591 /* StatsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StatsViewController.h; sourceTree = "<group>"; };
 		99B15642187B412400B24591 /* StatsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StatsViewController.m; sourceTree = "<group>"; };
 		99B3FA381877898B00539A7B /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
@@ -187,6 +190,8 @@
 				1E960A9B1E7DF9BB000E2BB8 /* DetailViewController.m */,
 				1E960A9C1E7DF9BB000E2BB8 /* MasterViewController.h */,
 				1E960A9D1E7DF9BB000E2BB8 /* MasterViewController.m */,
+				1EA164881E9433FD00D77C4A /* NSUserDefaults+Color.h */,
+				1EA164891E9433FD00D77C4A /* NSUserDefaults+Color.m */,
 				1E960A9E1E7DF9BB000E2BB8 /* StatsViewController.h */,
 				1E960A9F1E7DF9BC000E2BB8 /* StatsViewController.m */,
 				1E960AFB1E7F9C80000E2BB8 /* MSColorPicker */,
@@ -477,6 +482,7 @@
 				1E960AA51E7E097C000E2BB8 /* BEMCircle.m in Sources */,
 				1E960B1A1E7F9C80000E2BB8 /* MSThumbView.m in Sources */,
 				1E960B151E7F9C80000E2BB8 /* MSColorUtils.m in Sources */,
+				1EA1648A1E9433FD00D77C4A /* NSUserDefaults+Color.m in Sources */,
 				1E960AA61E7E097C000E2BB8 /* BEMLine.m in Sources */,
 				1E960AA71E7E097C000E2BB8 /* BEMAverageLine.m in Sources */,
 				1E960AA81E7E0990000E2BB8 /* BEMGraphCalculator.m in Sources */,

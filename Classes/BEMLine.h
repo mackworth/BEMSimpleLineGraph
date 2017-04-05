@@ -45,17 +45,14 @@ typedef NS_ENUM(NSUInteger, BEMLineGradientDirection) {
 /// All of the Y-axis values for the points
 @property (strong, nonatomic, nonnull) NSArray <NSNumber *> *arrayOfPoints;
 
+/// All of the X-axis values for the points
+@property (strong, nonatomic, nonnull) NSArray <NSNumber *> *arrayOfXValues;
+
 /// All of the X-Axis coordinates used to draw vertical lines through
 @property (strong, nonatomic, nonnull) NSArray <NSNumber *> *arrayOfVerticalReferenceLinePoints;
 
-/// The value used to offset the fringe vertical reference lines when the x-axis labels are on the edge
-@property (assign, nonatomic) CGFloat verticalReferenceHorizontalFringeNegation;
-
 /// All of the Y-Axis coordinates used to draw horizontal lines through
 @property (strong, nonatomic, nullable) NSArray <NSNumber *> *arrayOfHorizontalReferenceLinePoints;
-
-/// All of the point values
-@property (strong, nonatomic, nullable) NSArray <NSNumber *> *arrayOfValues;
 
 /** Draw thin, translucent, reference lines using the provided X-Axis and Y-Axis coordinates.
  @see Use \p arrayOfVerticalReferenceLinePoints to specify vertical reference lines' positions. Use \p arrayOfHorizontalReferenceLinePoints to specify horizontal reference lines' positions. */

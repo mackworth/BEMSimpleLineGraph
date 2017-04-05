@@ -408,6 +408,13 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @param index The index from left to right of a given label on the X-axis. Is the same index as the one for the points. The first value for the index is 0. */
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index;
 
+/** The string to display on the label on the X-axis at a given location.
+ @discussion Use this instead of labelOnXAxisForIndex when you have implemented locationForPointAtIndex.
+ @param graph The graph object which is requesting the label on the specified X-Axis position.
+ @param location The location for a label in the same units/range as locationForPointAtIndex, although the requested location may be in between values returned from locationForPointAtIndex if numberOfXAxisLabelsOnLineGraph is implemented (as this provides evenly spaced labels despite possbly uneven data points).
+ */
+- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location;
+
 
 @end
 
@@ -486,6 +493,17 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @param graph The graph object requesting the minimum value.
  @return The minimum value of the Y-Axis. */
 - (CGFloat)minValueForLineGraph:(BEMSimpleLineGraphView *)graph;
+
+/** Optional method to set the maximum value of the X-Axis. If not implemented, the maximum value will be the biggest point of the graph.
+ @param graph The graph object requesting the maximum value.
+ @return The maximum value of the Y-Axis. */
+- (CGFloat)maxXValueForLineGraph:(BEMSimpleLineGraphView *)graph;
+
+
+/** Optional method to set the minimum value of the Y-Axis. If not implemented, the minimum value will be the smallest point of the graph.
+ @param graph The graph object requesting the minimum value.
+ @return The minimum value of the Y-Axis. */
+- (CGFloat)minXValueForLineGraph:(BEMSimpleLineGraphView *)graph;
 
 /** Optional method to set the average value for the Average line. If not implemented, the value will be the average point of the graph.
  @param graph The graph object requesting the minimum value.
@@ -569,6 +587,19 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @param graph The graph object which is requesting the number of gaps between the labels.
  @return Array of graph indices to place X-Axis labels */
 - (NSArray <NSNumber *> *)incrementPositionsForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph;
+
+//should be in datasource, not delegate
+/** The horizontal position for a point at the given index. It corresponds to the X-axis value of the Graph.
+ @param graph The graph object requesting the point value.
+ @param index The index from left to right of a given point (X-axis). The first value for the index is 0.
+ @return The X-axis value at a given index. */
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSUInteger)index;
+
+/** The total number of X-axis labels on the line graph.
+ @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. Only relevant if lineGraph:locationForPointAtIndex: is implemented. If implemented, it diverges labels from data points
+ @param graph The graph object which is requesting the number of labels.
+ @return The number of labels displayed on the Y-axis. */
+- (NSInteger)numberOfXAxisLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
 
 

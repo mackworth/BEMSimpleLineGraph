@@ -10,11 +10,12 @@
 #import "DetailViewController.h"
 #import "ARFontPickerViewController.h"
 #import "MSColorSelectionViewController.h"
+#import "NSUserDefaults+Color.h"
 
 //some convenience extensions for setting and reading
 @interface UITextField (Numbers)
 @property (nonatomic) CGFloat floatValue;
-@property (nonatomic) NSUInteger intValue;
+@property (nonatomic) NSInteger intValue;
 
 @end
 
@@ -38,11 +39,11 @@
     }
 }
 
--(void) setIntValue:(NSUInteger) num {
+-(void) setIntValue:(NSInteger) num {
     if (num == NSNotFound ) {
         self.text = @"";
-    } else if (num == (NSUInteger)-1 ) {
-        self.text = @"oops";
+    } else if (num == -1 ) {
+        self.text = @"";
     }else {
         self.text = [NSString stringWithFormat:@"%d",(int)num];
     }
@@ -56,11 +57,11 @@
     }
 }
 
--(NSUInteger) intValue {
+-(NSInteger) intValue {
     if (self.text.length ==0) {
         return NSNotFound;
     } else {
-        return (NSUInteger) self.text.integerValue;
+        return  self.text.integerValue;
     }
 
 }
@@ -105,6 +106,10 @@ static NSString * checkOn = @"☒";
 @property (strong, nonatomic) IBOutlet UITextField *baseIndexForXAxisField;
 @property (strong, nonatomic) IBOutlet UITextField *incrementIndexForXAxisField;
 @property (strong, nonatomic) IBOutlet UISwitch *arrayOfIndicesForXAxis;
+@property (strong, nonatomic) IBOutlet UISwitch *variableXAxisSwitch;
+@property (strong, nonatomic) IBOutlet UITextField *numberofXAxisLabelsField;
+@property (strong, nonatomic) IBOutlet UITextField *maxXValueField;
+@property (strong, nonatomic) IBOutlet UITextField *minXValueField;
 
 @property (strong, nonatomic) IBOutlet UISwitch *yAxisSwitch;
 @property (strong, nonatomic) IBOutlet UISwitch *yAxisRightSwitch;
@@ -201,21 +206,211 @@ CGGradientRef createGradient () {
     // Do any additional setup after loading the view, typically from a nib.
     self.hasRestoredUI = NO;
     self.detailViewController = (DetailViewController *)[[self.splitViewController.viewControllers lastObject] topViewController];
-}
-
--(void) viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    if (!self.hasRestoredUI) [self restoreUI];
-}
-
--(void) decodeRestorableStateWithCoder:(NSCoder *)coder {
-    [super decodeRestorableStateWithCoder:coder];
-    [self restoreUI];  //kludge for VWA not getting called during restore
-}
-
--(void) restoreUI {
+    UIApplication *app = [UIApplication sharedApplication];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(applicationWillResign:)
+                                                 name:UIApplicationWillResignActiveNotification
+                                               object:app];
     [self.detailViewController loadViewIfNeeded];
     self.myGraph = self.detailViewController.myGraph;
+
+//    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+//    NSData *encodedGraph = [defaults objectForKey:@"myGraph"];
+//    if (encodedGraph) {
+//        BEMSimpleLineGraphView * graph = [NSKeyedUnarchiver unarchiveObjectWithData:encodedGraph];
+//        if (graph) {
+//            [self.detailViewController loadViewIfNeeded];
+//
+//
+//            [self.detailViewController.myGraph.superview addSubview: graph];
+//            [self.detailViewController.myGraph removeFromSuperview];
+//            graph.dataSource = self.detailViewController;
+//            graph.delegate = self.detailViewController;
+//            self.detailViewController.myGraph = graph;
+//        }
+//    }
+    [self restoreProperties];
+    [self restoreUI];
+
+}
+
+-(void) applicationWillResign:(id) sender {
+    [self saveProperties];
+}
+
+-(void) restoreProperties {
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+
+#define RestoreProperty(property, type) \
+if ([defaults objectForKey:@#property] != nil) { \
+self.myGraph.property = [defaults   type ##ForKey:@#property]; \
+}\
+
+    //#pragma clang diagnostic push
+    //#pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
+
+    RestoreProperty (colorXaxisLabel, color);
+    RestoreProperty (colorYaxisLabel, color);
+    RestoreProperty (colorTop, color);
+    RestoreProperty (colorLine, color);
+    RestoreProperty (colorBottom, color);
+    RestoreProperty (colorPoint, color);
+    RestoreProperty (colorTouchInputLine, color);
+    RestoreProperty (colorBackgroundPopUplabel, color);
+    RestoreProperty (colorBackgroundYaxis, color);
+    RestoreProperty (colorBackgroundXaxis, color);
+    RestoreProperty (averageLine.color, color);
+
+    RestoreProperty (alphaTop, float);
+    RestoreProperty (alphaLine, float);
+    RestoreProperty (alphaTouchInputLine, float);
+    RestoreProperty (alphaBackgroundXaxis, float);
+    RestoreProperty (alphaBackgroundYaxis, float);
+
+    RestoreProperty (widthLine, float);
+    RestoreProperty (widthReferenceLines, float);
+    RestoreProperty (sizePoint, float);
+    RestoreProperty (widthTouchInputLine, float);
+
+    RestoreProperty (enableTouchReport, bool);
+    RestoreProperty (enablePopUpReport, bool);
+    RestoreProperty (enableBezierCurve, bool);
+    RestoreProperty (enableXAxisLabel, bool);
+    RestoreProperty (enableYAxisLabel, bool);
+    RestoreProperty (autoScaleYAxis, bool);
+    RestoreProperty (alwaysDisplayDots, bool);
+    RestoreProperty (alwaysDisplayPopUpLabels, bool);
+    RestoreProperty (enableLeftReferenceAxisFrameLine, bool);
+    RestoreProperty (enableBottomReferenceAxisFrameLine, bool);
+    RestoreProperty (interpolateNullValues, bool);
+    RestoreProperty (displayDotsOnly, bool);
+    RestoreProperty (displayDotsWhileAnimating, bool);
+
+    RestoreProperty (touchReportFingersRequired, integer);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
+    RestoreProperty (formatStringForValues, object);
+
+    //RestoreProperty (averageLine, object);
+#pragma clang diagnostic pop
+
+   NSString * labelFontName = [defaults objectForKey:@"labelFontName"] ;
+    if (labelFontName) {
+        CGFloat labelFontSize =  [defaults floatForKey:@"labelFontSize"] ;
+        [self updateFont:labelFontName atSize:labelFontSize];
+    }
+#define RestoreDetail(property, type) \
+if ([defaults objectForKey:@#property] != nil) { \
+self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
+}
+
+    RestoreDetail (popUpText, object);
+    RestoreDetail (popUpPrefix, object);
+    RestoreDetail (popUpSuffix, object);
+    RestoreDetail (testAlwaysDisplayPopup, bool );
+    RestoreDetail (maxValue, float );
+    RestoreDetail (minValue, float );
+    RestoreDetail (maxXValue, float );
+    RestoreDetail (minXValue, float );
+    RestoreDetail (variableXAxis, bool );
+    RestoreDetail (numberofXAxisLabels, integer );
+    RestoreDetail (noDataLabel, bool );
+    RestoreDetail (noDataText, object);
+    RestoreDetail (staticPaddingValue, float );
+    RestoreDetail (provideCustomView, bool );
+    RestoreDetail (numberOfGapsBetweenLabels, integer );
+    RestoreDetail (baseIndexForXAxis, integer );
+    RestoreDetail (incrementIndexForXAxis, integer );
+    RestoreDetail (provideIncrementPositionsForXAxis, bool );
+    RestoreDetail (numberOfYAxisLabels, integer );
+    RestoreDetail (yAxisPrefix, object);
+    RestoreDetail (yAxisSuffix, object);
+    RestoreDetail (baseValueForYAxis, float );
+    RestoreDetail (incrementValueForYAxis, float );}
+
+
+-(void) saveProperties{
+
+    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
+#define EncodeProperty(property, type) [defaults set ## type: self.myGraph.property forKey:@#property]
+
+    EncodeProperty (animationGraphEntranceTime, Float);
+    EncodeProperty (animationGraphStyle, Integer);
+
+    EncodeProperty (colorXaxisLabel, Color);
+    EncodeProperty (colorYaxisLabel, Color);
+    EncodeProperty (colorTop, Color);
+    EncodeProperty (colorLine, Color);
+    EncodeProperty (colorBottom, Color);
+    EncodeProperty (colorPoint, Color);
+    EncodeProperty (colorTouchInputLine, Color);
+    EncodeProperty (colorBackgroundPopUplabel, Color);
+    EncodeProperty (colorBackgroundYaxis, Color);
+    EncodeProperty (colorBackgroundXaxis, Color);
+    EncodeProperty (averageLine.color, Color);
+
+    EncodeProperty (alphaTop, Float);
+    EncodeProperty (alphaLine, Float);
+    EncodeProperty (alphaTouchInputLine, Float);
+    EncodeProperty (alphaBackgroundXaxis, Float);
+    EncodeProperty (alphaBackgroundYaxis, Float);
+
+    EncodeProperty (widthLine, Float);
+    EncodeProperty (widthReferenceLines, Float);
+    EncodeProperty (sizePoint, Float);
+    EncodeProperty (widthTouchInputLine, Float);
+
+    EncodeProperty (enableTouchReport, Bool);
+    EncodeProperty (enablePopUpReport, Bool);
+    EncodeProperty (enableBezierCurve, Bool);
+    EncodeProperty (enableXAxisLabel, Bool);
+    EncodeProperty (enableYAxisLabel, Bool);
+    EncodeProperty (autoScaleYAxis, Bool);
+    EncodeProperty (alwaysDisplayDots, Bool);
+    EncodeProperty (alwaysDisplayPopUpLabels, Bool);
+    EncodeProperty (enableLeftReferenceAxisFrameLine, Bool);
+    EncodeProperty (enableBottomReferenceAxisFrameLine, Bool);
+    EncodeProperty (enableTopReferenceAxisFrameLine, Bool);
+    EncodeProperty (enableRightReferenceAxisFrameLine, Bool);
+    EncodeProperty (interpolateNullValues, Bool);
+    EncodeProperty (displayDotsOnly, Bool);
+    EncodeProperty (displayDotsWhileAnimating, Bool);
+    EncodeProperty (touchReportFingersRequired, Integer);
+
+    EncodeProperty (formatStringForValues, Object);
+    //   EncodeProperty (averageLine, Object);
+
+    [defaults setObject:self.myGraph.labelFont.fontName forKey:@"labelFontName"] ;
+    [defaults setFloat:self.myGraph.labelFont.pointSize forKey:@"labelFontSize"] ;
+
+#define EncodeDetail(property, type) [defaults set ## type: self.detailViewController.property forKey:@#property]
+    EncodeDetail (popUpText, Object);
+    EncodeDetail (popUpPrefix, Object);
+    EncodeDetail (popUpSuffix, Object);
+    EncodeDetail (testAlwaysDisplayPopup, Bool );
+    EncodeDetail (maxValue, Float );
+    EncodeDetail (minValue, Float );
+    EncodeDetail (maxXValue, Float );
+    EncodeDetail (minXValue, Float );
+    EncodeDetail (variableXAxis, Bool );
+    EncodeDetail (numberofXAxisLabels, Integer );
+    EncodeDetail (noDataLabel, Bool );
+    EncodeDetail (noDataText, Object);
+    EncodeDetail (staticPaddingValue, Float );
+    EncodeDetail (provideCustomView, Bool );
+    EncodeDetail (numberOfGapsBetweenLabels, Integer );
+    EncodeDetail (baseIndexForXAxis, Integer );
+    EncodeDetail (incrementIndexForXAxis, Integer );
+    EncodeDetail (provideIncrementPositionsForXAxis, Bool );
+    EncodeDetail (numberOfYAxisLabels, Integer );
+    EncodeDetail (yAxisPrefix, Object);
+    EncodeDetail (yAxisSuffix, Object);
+    EncodeDetail (baseValueForYAxis, Float );
+    EncodeDetail (incrementValueForYAxis, Float );
+}
+
+
+-(void) restoreUI {
     self.hasRestoredUI = YES;
 
     self.widthLine.floatValue = self.myGraph.widthLine;
@@ -228,6 +423,10 @@ CGGradientRef createGradient () {
     self.baseIndexForXAxisField.floatValue = self.detailViewController.baseValueForYAxis;
     self.incrementIndexForXAxisField.intValue = self.detailViewController.incrementIndexForXAxis;
     self.arrayOfIndicesForXAxis.on = self.detailViewController.provideIncrementPositionsForXAxis;
+    self.variableXAxisSwitch.on = self.detailViewController.variableXAxis;
+    self.numberofXAxisLabelsField.intValue = self.detailViewController.numberofXAxisLabels;
+    self.maxXValueField.intValue = self.detailViewController.maxXValue;
+    self.minXValueField.intValue = self.detailViewController.minValue;
 
     self.yAxisSwitch.on = self.myGraph.enableYAxisLabel;
     self.yAxisRightSwitch.on = self.myGraph.positionYAxisRight;
@@ -305,16 +504,14 @@ CGGradientRef createGradient () {
 /* properties/methods not implemented:
      touchReportFingersRequired,
      autoScaleYAxis
-
- Dashpatterns for averageLine, XAxis, Yaxis
-
+    Dashpatterns for averageLine, XAxis, Yaxis
     Gradient choices
  */
 
 
 #pragma mark Main Line
 - (IBAction)widthLineDidChange:(UITextField *)sender {
-    float value = sender.text.floatValue;
+    float value = sender.floatValue;
     if (value > 0.0f) {
         self.myGraph.widthLine = sender.text.doubleValue;
     }
@@ -337,7 +534,7 @@ CGGradientRef createGradient () {
 }
 
 #pragma mark Axes and Reference Lines
--(NSUInteger) getValue:(NSString *) text {
+-(NSInteger) getValue:(NSString *) text {
     return (text.length > 0  && text.integerValue >= 0) ? text.integerValue : NSNotFound;
 }
 
@@ -355,6 +552,7 @@ CGGradientRef createGradient () {
     self.detailViewController.baseIndexForXAxis = [self getValue:sender.text];
     [self.myGraph reloadGraph];
 }
+
 - (IBAction)incrementIndexForXAxisDidChange:(UITextField *)sender {
     self.detailViewController.incrementIndexForXAxis = [self getValue:sender.text];
     [self.myGraph reloadGraph];
@@ -363,7 +561,30 @@ CGGradientRef createGradient () {
 - (IBAction)enableArrayOfIndicesForXAxis:(UISwitch *)sender {
     self.detailViewController.provideIncrementPositionsForXAxis = sender.on;
     [self.myGraph reloadGraph];
+}
 
+- (IBAction)variableXAxis:(UISwitch *)sender {
+    self.detailViewController.variableXAxis = sender.on;
+    [self.myGraph reloadGraph];
+}
+
+- (IBAction)numberofXAxisDidChange:(UITextField *)sender {
+    NSInteger newValue = sender.intValue;
+    if (newValue != NSNotFound) self.detailViewController.numberofXAxisLabels = newValue;
+    [self.myGraph reloadGraph];
+}
+
+- (IBAction)minXValueDidChange:(UITextField *)sender {
+    CGFloat newValue = sender.floatValue;
+    if (newValue >= 0) self.detailViewController.minXValue = newValue;
+    [self.myGraph reloadGraph];
+
+}
+
+- (IBAction)maxXValueDidChange:(UITextField *)sender {
+    CGFloat newValue = sender.floatValue;
+    if (newValue >= 0) self.detailViewController.maxXValue = newValue;
+    [self.myGraph reloadGraph];
 }
 
 #pragma mark Axes and Reference Lines
@@ -379,12 +600,16 @@ CGGradientRef createGradient () {
 }
 
 - (IBAction)minValueDidChange:(UITextField *)sender {
-    self.detailViewController.minValue = sender.text.doubleValue;
+    CGFloat newValue = -1;
+    if (sender.text.length > 0) newValue = sender.text.doubleValue;
+    self.detailViewController.minValue = newValue;
     [self.myGraph reloadGraph];
 
 }
 
 - (IBAction)maxValueDidChange:(UITextField *)sender {
+    CGFloat newValue = -1;
+    if (sender.text.length > 0) newValue = sender.text.doubleValue;
     self.detailViewController.maxValue = sender.text.doubleValue;
     [self.myGraph reloadGraph];
 }
@@ -634,9 +859,9 @@ CGGradientRef createGradient () {
     // done in IB: [self performSegueWithIdentifier:@"FontPicker" sender:self];
 }
 
--(void) updateFont: (NSString *) fontName {
+-(void) updateFont: (NSString *) fontName atSize: (CGFloat) fontSize {
     if (!fontName) fontName = self.fontNameButton.titleLabel.text;
-    CGFloat fontSize = (CGFloat)self.fontSizeField.text.floatValue;
+    if (fontSize <= 0) fontSize = (CGFloat)self.fontSizeField.text.floatValue;
     if (fontSize < 1.0) fontSize = 14.0;
     UIFont * newFont = nil;
     if ([@"System" isEqualToString:fontName]) {
@@ -656,11 +881,11 @@ CGGradientRef createGradient () {
     self.fontNameButton.enabled = NO;
     [self.fontNameButton setTitle:fontName forState:UIControlStateNormal];
     self.fontNameButton.enabled = YES;
-    [self updateFont: fontName];
+    [self updateFont: fontName atSize:0.0];
 }
 
 - (IBAction)fontSizeFieldChanged:(UITextField *)sender {
-    [self updateFont:nil];
+    [self updateFont: nil atSize: self.fontSizeField.text.floatValue];
 }
 
 - (IBAction)numberFormatChanged:(UITextField *)sender {
