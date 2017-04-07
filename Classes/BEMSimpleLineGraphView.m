@@ -714,6 +714,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (void)drawXAxis {
+    [xAxisLabelTexts removeAllObjects];
+    [xReferenceLinePoints removeAllObjects];
+
     if (!self.enableXAxisLabel) {
         [self.backgroundXAxis removeFromSuperview];
         self.backgroundXAxis = nil;
@@ -826,7 +829,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
             UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:allLabelLocations[index].floatValue  reuseNumber: index];
 
-            [xReferenceLinePoints addObject:@(positionOnXAxis)];
+            if (yAxisValues[index].floatValue < BEMNullGraphValue || self.interpolateNullValues) {
+                [xReferenceLinePoints addObject:@(positionOnXAxis)];
+            }
             [self addSubview:labelXAxis];
             [newXAxisLabels addObject:labelXAxis];
         }
@@ -964,6 +969,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (void)drawYAxis {
+    [yAxisLabelPoints removeAllObjects];
+
     if (!self.enableYAxisLabel) {
         [self.backgroundYAxis removeFromSuperview];
         self.backgroundYAxis = nil;
@@ -998,8 +1005,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         self.backgroundYAxis.backgroundColor =  self.colorTop;
         self.backgroundYAxis.alpha = self.alphaTop;
     }
-
-    [yAxisLabelPoints removeAllObjects];
 
     NSUInteger numberOfLabels = 3;
     if ([self.delegate respondsToSelector:@selector(numberOfYAxisLabelsOnLineGraph:)]) {
@@ -1184,18 +1189,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     //now fixup left/right layout issues
     CGFloat xCenter = CGRectGetMidX(circleDotFrame);
     CGFloat halfLabelWidth = popUpLabel.frame.size.width/2 ;
-    if (self.enableYAxisLabel && !self.positionYAxisRight && ((xCenter - halfLabelWidth) <= self.YAxisLabelXOffset) ) {
-        //When bumping into left Y axis
+    if (!self.positionYAxisRight && ((xCenter - halfLabelWidth) <= self.YAxisLabelXOffset) && ((xCenter + halfLabelWidth) > self.YAxisLabelXOffset)) {
+        //When bumping into left Y axis or edge, but not all the way off
         xCenter = halfLabelWidth + self.YAxisLabelXOffset + 4.0f;
-    } else if (self.enableYAxisLabel && self.positionYAxisRight && (xCenter + halfLabelWidth >= self.frame.size.width - self.YAxisLabelXOffset)) {
-        //When bumping into right Y axis
+    } else if (self.positionYAxisRight && (xCenter + halfLabelWidth >= self.frame.size.width - self.YAxisLabelXOffset)&&  ((xCenter + halfLabelWidth) > self.YAxisLabelXOffset)) {
+        //When bumping into right Y axis or edge, but not all the way off
         xCenter = self.frame.size.width - halfLabelWidth  - self.YAxisLabelXOffset - 4.0f;
-    } else if (xCenter - halfLabelWidth <= 0) {
-        //When over left edge
-        xCenter = halfLabelWidth + 4.0f;
-    } else if (xCenter + halfLabelWidth >= self.frame.size.width) {
-        //When over right edge
-        xCenter = self.frame.size.width - halfLabelWidth;
     }
     popUpLabel.center = CGPointMake(xCenter, popUpLabel.center.y);
 }

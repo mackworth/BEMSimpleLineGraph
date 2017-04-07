@@ -403,8 +403,11 @@ float randomProbability () {
 #pragma mark Touch handling
 
 - (void)lineGraph:(BEMSimpleLineGraphView *)graph didTouchGraphWithClosestIndex:(NSUInteger)index {
-    self.labelValues.text = [self formatNumber:[self.arrayOfValues objectAtIndex:index]];
-    self.labelDates.text = [NSString stringWithFormat:@"on %@", [self labelForDateAtIndex:index]];
+    NSNumber * value = self.arrayOfValues[index];
+    if (value.floatValue < BEMNullGraphValue) {
+        self.labelValues.text = [self formatNumber:value];
+        self.labelDates.text = [NSString stringWithFormat:@"on %@", [self labelForDateAtIndex:index]];
+    }
 }
 
 - (void)lineGraph:(BEMSimpleLineGraphView *)graph didReleaseTouchFromGraphWithClosestIndex:(CGFloat)index {
