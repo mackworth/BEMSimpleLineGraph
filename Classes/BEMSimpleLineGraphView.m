@@ -723,7 +723,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         self.xAxisLabels = [NSMutableArray array];
         return;
     }
-    if (![self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)]) return;
+    if (!([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)] ||
+          [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)])) return;
 
     [xAxisLabelTexts removeAllObjects];
     [xReferenceLinePoints removeAllObjects];
@@ -822,16 +823,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             [xAxisLabelTexts addObject:xAxisLabelText];
 
             CGFloat positionOnXAxis = allLabelLocations[index].floatValue ;
-            // Determine the horizontal translation to perform on the far left and far right labels
 
-            NSInteger edgeAdjust = 0;
-            if (index == 0) {
-                edgeAdjust = 1;
-            } else if (index+1 == allLabelLocations.count) {
-                edgeAdjust = -1;
-            }
-
-            UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText  adjustEdge:edgeAdjust atLocation:allLabelLocations[index].floatValue  reuseNumber: index];
+            UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:allLabelLocations[index].floatValue  reuseNumber: index];
 
             [xReferenceLinePoints addObject:@(positionOnXAxis)];
             [self addSubview:labelXAxis];
@@ -885,7 +878,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     return xAxisLabelText;
 }
 
-- (UILabel *)xAxisLabelWithText:(NSString *) text adjustEdge:(NSInteger) edgeAdjust atLocation:(CGFloat) positionOnXAxis reuseNumber:(NSUInteger) xAxisLabelNumber{
+- (UILabel *)xAxisLabelWithText:(NSString *) text atLocation:(CGFloat) positionOnXAxis reuseNumber:(NSUInteger) xAxisLabelNumber{
     UILabel *labelXAxis;
     if (xAxisLabelNumber < self.xAxisLabels.count) {
         labelXAxis = self.xAxisLabels[xAxisLabelNumber];
@@ -904,8 +897,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     labelXAxis.numberOfLines = 0;
     CGRect lRect = [labelXAxis.text boundingRectWithSize:self.viewForFirstBaselineLayout.frame.size options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:labelXAxis.font} context:nil];
 
-    positionOnXAxis += edgeAdjust * lRect.size.width/2;
-
+    //if labels are partially on screen, nudge onto screen
+    if (positionOnXAxis >=0) positionOnXAxis = MAX(positionOnXAxis, lRect.size.width/2);
+    CGFloat rightEdge = self.frame.size.width - self.YAxisLabelXOffset;
+    if (positionOnXAxis <= rightEdge) positionOnXAxis = MIN(positionOnXAxis, rightEdge-lRect.size.width/2);
     if (!self.positionYAxisRight) {
         positionOnXAxis += self.YAxisLabelXOffset;
     }

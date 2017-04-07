@@ -11,6 +11,7 @@
 #import "ARFontPickerViewController.h"
 #import "MSColorSelectionViewController.h"
 #import "NSUserDefaults+Color.h"
+#import "BEMGraphCalculator.h"
 
 //some convenience extensions for setting and reading
 @interface UITextField (Numbers)
@@ -59,7 +60,7 @@
 
 -(NSInteger) intValue {
     if (self.text.length ==0) {
-        return NSNotFound;
+        return -1;
     } else {
         return  self.text.integerValue;
     }
@@ -90,8 +91,6 @@ static NSString * checkOn = @"☒";
 
 @interface MasterViewController () <ARFontPickerViewControllerDelegate, UITextFieldDelegate>
 
-@property (nonatomic) BOOL hasRestoredUI;
-
 @property (strong, nonatomic) IBOutlet BEMSimpleLineGraphView *myGraph;
 
 @property (strong, nonatomic) NSDictionary <NSString *, id> *methodList;
@@ -100,6 +99,7 @@ static NSString * checkOn = @"☒";
 @property (strong, nonatomic) IBOutlet UITextField *staticPaddingField;
 @property (strong, nonatomic) IBOutlet UISwitch *bezierSwitch;
 @property (strong, nonatomic) IBOutlet UISwitch *interpolateNullValuesSwitch;
+@property (strong, nonatomic) IBOutlet UISlider *percentNullSlider;
 
 @property (strong, nonatomic) IBOutlet UISwitch *xAxisSwitch;
 @property (strong, nonatomic) IBOutlet UITextField *numberOfGapsBetweenLabelsField;
@@ -200,38 +200,33 @@ CGGradientRef createGradient () {
     return result;
 }
 
+static NSDateFormatter *dateFormatter = nil;
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
-    self.hasRestoredUI = NO;
+    dateFormatter = [[NSDateFormatter alloc]init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+
     self.detailViewController = (DetailViewController *)[[self.splitViewController.viewControllers lastObject] topViewController];
+    [self.detailViewController loadViewIfNeeded];
+    self.myGraph = self.detailViewController.myGraph;
+
     UIApplication *app = [UIApplication sharedApplication];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(applicationWillResign:)
                                                  name:UIApplicationWillResignActiveNotification
                                                object:app];
-    [self.detailViewController loadViewIfNeeded];
-    self.myGraph = self.detailViewController.myGraph;
-
-//    NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
-//    NSData *encodedGraph = [defaults objectForKey:@"myGraph"];
-//    if (encodedGraph) {
-//        BEMSimpleLineGraphView * graph = [NSKeyedUnarchiver unarchiveObjectWithData:encodedGraph];
-//        if (graph) {
-//            [self.detailViewController loadViewIfNeeded];
-//
-//
-//            [self.detailViewController.myGraph.superview addSubview: graph];
-//            [self.detailViewController.myGraph removeFromSuperview];
-//            graph.dataSource = self.detailViewController;
-//            graph.delegate = self.detailViewController;
-//            self.detailViewController.myGraph = graph;
-//        }
-//    }
+    [self.detailViewController addObserver:self forKeyPath:@"newestDate" options:NSKeyValueObservingOptionNew context:nil];
     [self restoreProperties];
     [self restoreUI];
 
+}
+
+-(void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+//    if ([keyPath isEqualToString:@"newestDate"]) {
+        [self rangePlaceHolders:self];
+//    }
 }
 
 -(void) applicationWillResign:(id) sender {
@@ -313,10 +308,15 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     RestoreDetail (maxXValue, float );
     RestoreDetail (minXValue, float );
     RestoreDetail (variableXAxis, bool );
+    [defaults setObject:nil forKey:@"numberofXAxisLabels"];
+    [defaults setObject:nil forKey:@"numberOfGapsBetweenLabels"];
+    [defaults setObject:nil forKey:@"baseIndexForXAxis"];
+    [defaults setObject:nil forKey:@"incrementIndexForXAxis"];
     RestoreDetail (numberofXAxisLabels, integer );
     RestoreDetail (noDataLabel, bool );
     RestoreDetail (noDataText, object);
     RestoreDetail (staticPaddingValue, float );
+    RestoreDetail (percentNulls, float );
     RestoreDetail (provideCustomView, bool );
     RestoreDetail (numberOfGapsBetweenLabels, integer );
     RestoreDetail (baseIndexForXAxis, integer );
@@ -397,6 +397,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     EncodeDetail (noDataLabel, Bool );
     EncodeDetail (noDataText, Object);
     EncodeDetail (staticPaddingValue, Float );
+    EncodeDetail (percentNulls, Float );
     EncodeDetail (provideCustomView, Bool );
     EncodeDetail (numberOfGapsBetweenLabels, Integer );
     EncodeDetail (baseIndexForXAxis, Integer );
@@ -411,22 +412,21 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 
 -(void) restoreUI {
-    self.hasRestoredUI = YES;
-
     self.widthLine.floatValue = self.myGraph.widthLine;
     self.staticPaddingField.floatValue = self.detailViewController.staticPaddingValue;
     self.bezierSwitch.on = self.myGraph.enableBezierCurve;
     self.interpolateNullValuesSwitch.on = self.myGraph.interpolateNullValues;
+    self.percentNullSlider.value = self.detailViewController.percentNulls;
 
-    self.xAxisSwitch.on = self.myGraph.enableXAxisLabel;
+    self.xAxisSwitch.on = self.myGraph.enableXAxisLabel;;
     self.numberOfGapsBetweenLabelsField.intValue = self.detailViewController.numberOfGapsBetweenLabels;
     self.baseIndexForXAxisField.floatValue = self.detailViewController.baseValueForYAxis;
     self.incrementIndexForXAxisField.intValue = self.detailViewController.incrementIndexForXAxis;
     self.arrayOfIndicesForXAxis.on = self.detailViewController.provideIncrementPositionsForXAxis;
     self.variableXAxisSwitch.on = self.detailViewController.variableXAxis;
     self.numberofXAxisLabelsField.intValue = self.detailViewController.numberofXAxisLabels;
-    self.maxXValueField.intValue = self.detailViewController.maxXValue;
-    self.minXValueField.intValue = self.detailViewController.minValue;
+    self.maxXValueField.floatValue = self.detailViewController.maxXValue;
+    self.minXValueField.floatValue = self.detailViewController.minXValue;
 
     self.yAxisSwitch.on = self.myGraph.enableYAxisLabel;
     self.yAxisRightSwitch.on = self.myGraph.positionYAxisRight;
@@ -499,8 +499,21 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     self.alphaBackgroundXaxisField.floatValue = self.myGraph.alphaBackgroundXaxis;
     self.alphaBackgroundYaxisField.floatValue = self.myGraph.alphaBackgroundYaxis;
 
-}
 
+}
+-(void) rangePlaceHolders: (id) sender {
+    //give user a hint on what range is ok for min/max
+    self.maxValueField.placeholder = [NSString stringWithFormat:@"%0.2f",self.detailViewController.biggestValue ];
+    self.minValueField.placeholder = [NSString stringWithFormat:@"%0.2f",self.detailViewController.smallestValue ];
+    if (self.variableXAxisSwitch.isOn) {
+        self.minXValueField.placeholder = [dateFormatter stringFromDate: self.detailViewController.oldestDate ];
+        self.maxXValueField.placeholder = [dateFormatter stringFromDate: self.detailViewController.newestDate ];
+    } else {
+        self.minXValueField.placeholder =  @"0";
+        self.maxXValueField.placeholder = [NSString stringWithFormat:@"%ld",(long)self.detailViewController.numberOfPoints ];
+    }
+
+}
 /* properties/methods not implemented:
      touchReportFingersRequired,
      autoScaleYAxis
@@ -513,13 +526,13 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 - (IBAction)widthLineDidChange:(UITextField *)sender {
     float value = sender.floatValue;
     if (value > 0.0f) {
-        self.myGraph.widthLine = sender.text.doubleValue;
+        self.myGraph.widthLine = value;
     }
     [self.myGraph reloadGraph];
 }
 
 - (IBAction)staticPaddingDidChange:(UITextField *)sender {
-   self.detailViewController.staticPaddingValue = sender.text.doubleValue;
+   self.detailViewController.staticPaddingValue = sender.floatValue;
     [self.myGraph reloadGraph];
 }
 
@@ -533,10 +546,12 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [self.myGraph reloadGraph];
 }
 
-#pragma mark Axes and Reference Lines
--(NSInteger) getValue:(NSString *) text {
-    return (text.length > 0  && text.integerValue >= 0) ? text.integerValue : NSNotFound;
+- (IBAction)percentNullSliderChanged:(UISlider *)sender {
+    self.detailViewController.percentNulls = sender.value;
+    [self.myGraph reloadGraph];
 }
+
+#pragma mark Axes and Reference Lines
 
 - (IBAction)enableXAxisLabel:(UISwitch *)sender {
     self.myGraph.enableXAxisLabel = sender.on;
@@ -544,17 +559,17 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 - (IBAction)numberOfGapsBetweenLabelDidChange:(UITextField *)sender {
-    self.detailViewController.numberOfGapsBetweenLabels = [self getValue:sender.text];
+    self.detailViewController.numberOfGapsBetweenLabels = sender.intValue;
     [self.myGraph reloadGraph];
 }
 
 - (IBAction)baseIndexForXAxisDidChange:(UITextField *)sender {
-    self.detailViewController.baseIndexForXAxis = [self getValue:sender.text];
+    self.detailViewController.baseIndexForXAxis = sender.intValue;
     [self.myGraph reloadGraph];
 }
 
 - (IBAction)incrementIndexForXAxisDidChange:(UITextField *)sender {
-    self.detailViewController.incrementIndexForXAxis = [self getValue:sender.text];
+    self.detailViewController.incrementIndexForXAxis = sender.intValue;
     [self.myGraph reloadGraph];
 }
 
@@ -565,25 +580,52 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 - (IBAction)variableXAxis:(UISwitch *)sender {
     self.detailViewController.variableXAxis = sender.on;
+    self.maxXValueField.text = @"";
+    self.minValueField.text = @"";
+    self.detailViewController.maxXValue = -1;
+    self.detailViewController.minXValue = -1;
+
+    [self rangePlaceHolders:self];
     [self.myGraph reloadGraph];
 }
 
 - (IBAction)numberofXAxisDidChange:(UITextField *)sender {
-    NSInteger newValue = sender.intValue;
-    if (newValue != NSNotFound) self.detailViewController.numberofXAxisLabels = newValue;
+    self.detailViewController.numberofXAxisLabels = sender.intValue;
     [self.myGraph reloadGraph];
 }
 
 - (IBAction)minXValueDidChange:(UITextField *)sender {
-    CGFloat newValue = sender.floatValue;
-    if (newValue >= 0) self.detailViewController.minXValue = newValue;
+    if (self.variableXAxisSwitch.on) {
+        //expect date format
+        NSTimeInterval interval = [self timeIntervalFromString:sender.text];
+        if (interval > 0) {
+            self.detailViewController.minXValue = interval;
+        } else {
+            self.detailViewController.minXValue = -1;
+        }
+    } else {
+        self.detailViewController.minXValue = sender.floatValue;
+    }
     [self.myGraph reloadGraph];
-
 }
 
+-(NSTimeInterval) timeIntervalFromString: (NSString *) string {
+     NSDate *date = [dateFormatter dateFromString:string ];
+    return (date) ? [date timeIntervalSinceReferenceDate] : 0;
+ }
+
 - (IBAction)maxXValueDidChange:(UITextField *)sender {
-    CGFloat newValue = sender.floatValue;
-    if (newValue >= 0) self.detailViewController.maxXValue = newValue;
+    if (self.variableXAxisSwitch.isOn) {
+        //expect date format
+        NSTimeInterval interval = [self timeIntervalFromString:sender.text];
+        if (interval > 0) {
+            self.detailViewController.maxXValue = interval;
+        } else {
+            self.detailViewController.maxValue = -1;
+        }
+    } else {
+        self.detailViewController.maxXValue = sender.floatValue;
+    }
     [self.myGraph reloadGraph];
 }
 
@@ -600,22 +642,18 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 - (IBAction)minValueDidChange:(UITextField *)sender {
-    CGFloat newValue = -1;
-    if (sender.text.length > 0) newValue = sender.text.doubleValue;
-    self.detailViewController.minValue = newValue;
+    self.detailViewController.minValue = sender.floatValue;
     [self.myGraph reloadGraph];
 
 }
 
 - (IBAction)maxValueDidChange:(UITextField *)sender {
-    CGFloat newValue = -1;
-    if (sender.text.length > 0) newValue = sender.text.doubleValue;
-    self.detailViewController.maxValue = sender.text.doubleValue;
+    self.detailViewController.maxValue = sender.floatValue;
     [self.myGraph reloadGraph];
 }
 
 - (IBAction)numberofYAxisDidChange:(UITextField *)sender {
-    self.detailViewController.numberOfYAxisLabels = [self getValue:sender.text];
+    self.detailViewController.numberOfYAxisLabels = sender.intValue;
     [self.myGraph reloadGraph];
 }
 
@@ -629,12 +667,12 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [self.myGraph reloadGraph];
 }
 - (IBAction)baseValueForYAxisDidChange:(UITextField *)sender {
-    self.detailViewController.baseValueForYAxis = sender.text.doubleValue;
+    self.detailViewController.baseValueForYAxis = sender.floatValue;
     [self.myGraph reloadGraph];
 
 }
 - (IBAction)incrementValueForYAxisDidChange:(UITextField *)sender {
-    self.detailViewController.incrementValueForYAxis = sender.text.doubleValue;
+    self.detailViewController.incrementValueForYAxis = sender.floatValue;
     [self.myGraph reloadGraph];
 }
 
@@ -872,7 +910,6 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     if (newFont) {
         self.myGraph.labelFont = newFont;
         self.fontNameButton.titleLabel.font = newFont;
-        [self.myGraph reloadGraph];
     }
 }
 
@@ -882,10 +919,12 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [self.fontNameButton setTitle:fontName forState:UIControlStateNormal];
     self.fontNameButton.enabled = YES;
     [self updateFont: fontName atSize:0.0];
+    [self.myGraph reloadGraph];
 }
 
 - (IBAction)fontSizeFieldChanged:(UITextField *)sender {
     [self updateFont: nil atSize: self.fontSizeField.text.floatValue];
+    [self.myGraph reloadGraph];
 }
 
 - (IBAction)numberFormatChanged:(UITextField *)sender {
@@ -1136,5 +1175,10 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     return YES;
 }
 
+-(void) dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self.detailViewController removeObserver:self forKeyPath:@"totalNumber" ];
+
+}
 @end
 

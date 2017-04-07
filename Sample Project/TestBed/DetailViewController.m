@@ -12,16 +12,19 @@
 
 @interface DetailViewController ()
 
-@property (weak, nonatomic) IBOutlet UIStepper *graphObjectIncrement;
-@property (nonatomic) NSInteger previousStepperValue;
+@property (strong, nonatomic) NSDate * oldestDate, * newestDate;
+@property (assign, nonatomic) CGFloat smallestValue, biggestValue;
+@property (nonatomic, assign) NSInteger numberOfPoints;
 
-@property (strong, nonatomic) NSMutableArray *arrayOfValues;
-@property (strong, nonatomic) NSMutableArray *arrayOfDates;
+
+@property (weak, nonatomic) IBOutlet UIStepper *graphObjectIncrement;
+
+@property (strong, nonatomic) NSMutableArray <NSNumber *> *arrayOfValues;
+@property (strong, nonatomic) NSMutableArray <NSDate *> *arrayOfDates;
 
 @property (strong, nonatomic) IBOutlet UILabel *labelValues;
 @property (strong, nonatomic) IBOutlet UILabel *labelDates;
 
-@property (strong, nonatomic) NSDate * oldestDate, * newestDate;
 @property (nonatomic) NSInteger totalNumber;
 @property (strong, nonatomic) NSDateFormatter * dateFormatter;
 @property (strong, nonatomic) IBOutlet UIView * customView;
@@ -40,15 +43,16 @@
     self.maxXValue = -1.0;
     self.minXValue = -1.0;
     self.staticPaddingValue = -1.0;
-    self.numberOfGapsBetweenLabels = NSNotFound;
-    self.baseIndexForXAxis = NSNotFound;
-    self.incrementIndexForXAxis = NSNotFound;
-    self.numberOfYAxisLabels = NSNotFound;
+    self.numberOfGapsBetweenLabels = -1;
+    self.baseIndexForXAxis = -1;
+    self.incrementIndexForXAxis = -1;
+    self.numberOfYAxisLabels = -1;
     self.baseValueForYAxis = -1.0;
     self.incrementValueForYAxis = -1.0;
     self.dateFormatter =   [[NSDateFormatter alloc] init];
     self.dateFormatter.dateFormat = @"MM/dd:HH";
     self.variableXAxis = NO;
+    self.percentNulls = .2;
 
     // Do any additional setup after loading the view.
 
@@ -60,6 +64,12 @@
 }
 
 #pragma mark Data management
+
+float randomProbability () {
+    return  (float) ((double)(arc4random())) / UINT32_MAX;
+}
+
+
 - (void)hydrateDatasets {
     // Reset the arrays of values (Y-Axis points) and dates (X-Axis points / labels)
     if (!self.arrayOfValues) self.arrayOfValues = [[NSMutableArray alloc] init];
@@ -69,28 +79,41 @@
 
     self.totalNumber = 0;
     NSDate *date = [NSDate date];
-    BOOL showNullValue = YES;
-    self.previousStepperValue = self.graphObjectIncrement.value;
-    self.oldestDate = [NSDate distantFuture];
-    self.newestDate = [NSDate distantPast];
-
+    self.numberOfPoints = self.graphObjectIncrement.value;
     // Add objects to the array based on the stepper value
-    for (int i = 0; i < self.graphObjectIncrement.value; i++) {
-        if (showNullValue && (i % 8 == 0)) {
+    for (int i = 0; i < self.numberOfPoints; i++) {
+        if (randomProbability() < self.percentNulls) {
             [self.arrayOfValues addObject: @(BEMNullGraphValue)];
         } else {
-            [self.arrayOfValues addObject:@([self getRandomFloat])]; // Random values for the graph
-            self.totalNumber = self.totalNumber + [[self.arrayOfValues objectAtIndex:i] intValue]; // All of the values added together
+            CGFloat value =[self getRandomFloat];
+            [self.arrayOfValues addObject:@(value)]; // Random values for the graph
         }
        [self.arrayOfDates addObject:date]; // Dates for the X-Axis of the graph
         date = [self dateForGraphAfterDate:date];
-        self.oldestDate = [self.oldestDate earlierDate:date];
-        self.newestDate = [self.newestDate laterDate:date];
     }
+    [self checkMaximums];
     NSLog(@"dates: %@",self.arrayOfDates);
     NSLog(@"values: %@",self.arrayOfValues);
 }
 
+-(void) checkMaximums {
+    self.oldestDate = [NSDate distantFuture];
+    self.newestDate = [NSDate distantPast];
+    self.biggestValue = -INFINITY;
+    self.smallestValue = INFINITY;
+    for (int i = 0; i < self.numberOfPoints; i++) {
+        CGFloat value = self.arrayOfValues[i].floatValue;
+        NSDate * date = self.arrayOfDates[i];
+        if (value < BEMNullGraphValue) {
+            self.totalNumber = self.totalNumber + value;
+            self.biggestValue = MAX(self.biggestValue,value );
+            self.smallestValue = MIN(self.smallestValue,value );
+        }
+        self.oldestDate = [self.oldestDate earlierDate:date];
+        self.newestDate = [self.newestDate laterDate:date]; //needs to be last for notification
+    }
+
+}
 - (NSDate *)dateForGraphAfterDate:(NSDate *)date {
     NSInteger numDays =  (NSInteger)(arc4random() % 6) +1 ;
     NSTimeInterval secondsInTwentyFourHours = 24 * 60 * 60 * numDays;
@@ -100,10 +123,14 @@
 
 - (NSString *)labelForDateAtIndex:(NSInteger)index {
     NSDate *date = self.arrayOfDates[index];
-    NSDateFormatter *df = [[NSDateFormatter alloc] init];
-    df.dateFormat = @"MM/dd";
-    NSString *label = [df stringFromDate:date];
+    NSString *label = [self.dateFormatter stringFromDate:date];
     return label;
+}
+
+-(void) setPercentNulls:(float)percentNulls {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refresh:)  object:nil];
+    _percentNulls = percentNulls;
+    [self performSelector:@selector(refresh:) withObject:nil afterDelay:0.25];
 }
 
 #pragma mark - Graph Actions
@@ -120,21 +147,24 @@
 }
 
 - (IBAction)addOrRemovePointFromGraph:(id)sender {
-    if (self.graphObjectIncrement.value > self.previousStepperValue) {
+    if (self.graphObjectIncrement.value > self.numberOfPoints) {
         [self addPointToGraph];
-    } else if (self.graphObjectIncrement.value < self.previousStepperValue) {
+    } else if (self.graphObjectIncrement.value < self.numberOfPoints) {
         [self removePointFromGraph];
     }
-    self.previousStepperValue = self.graphObjectIncrement.value;
+    self.numberOfPoints = self.graphObjectIncrement.value;
+    [self checkMaximums];
 }
 
 - (void) addPointToGraph {
     // Add point
     NSNumber * newValue ;
-    if (self.arrayOfValues.count % 4 == 0) {
+    if (randomProbability() < self.percentNulls) {
         newValue = @(BEMNullGraphValue);
     } else {
         newValue = @([self getRandomFloat]);
+        self.biggestValue = MAX(self.biggestValue, newValue.floatValue );
+        self.smallestValue = MIN(self.smallestValue, newValue.floatValue );
     }
     [self.arrayOfValues addObject:newValue];
     NSDate *lastDate = self.arrayOfDates.count > 0 ? [self.arrayOfDates lastObject]: [NSDate date];
@@ -189,7 +219,7 @@
 
 - (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSUInteger)index {
 
-    return [[self.arrayOfDates objectAtIndex:index] timeIntervalSince1970];
+    return [[self.arrayOfDates objectAtIndex:index] timeIntervalSinceReferenceDate];
 }
 
 #pragma mark - SimpleLineGraph Delegate
@@ -224,15 +254,15 @@
     } else if (aSelector == @selector(lineGraph:modifyPopupView:forIndex:)) {
         return self.provideCustomView;
     } else if (aSelector == @selector(numberOfGapsBetweenLabelsOnLineGraph:)) {
-        return self.numberOfGapsBetweenLabels != NSNotFound;
+        return self.numberOfGapsBetweenLabels >= 0;
     } else if (aSelector == @selector(baseIndexForXAxisOnLineGraph:)) {
-        return self.baseIndexForXAxis != NSNotFound;
+        return self.baseIndexForXAxis >= 0;
     } else if (aSelector == @selector(incrementIndexForXAxisOnLineGraph:)) {
-        return self.incrementIndexForXAxis != NSNotFound;
+        return self.incrementIndexForXAxis >= 0;
     } else if (aSelector == @selector(incrementPositionsForXAxisOnLineGraph:)) {
         return self.provideIncrementPositionsForXAxis;
     } else if (aSelector == @selector(numberOfYAxisLabelsOnLineGraph:)) {
-        return self.numberOfYAxisLabels != NSNotFound;
+        return self.numberOfYAxisLabels >= 0;
     } else if (aSelector == @selector(yAxisPrefixOnLineGraph:)) {
         return self.yAxisPrefix.length > 0;
     } else if (aSelector == @selector(yAxisSuffixOnLineGraph:)) {
@@ -254,7 +284,7 @@
 }
 
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location {
-    NSDate *date = [NSDate dateWithTimeIntervalSince1970:location];
+    NSDate *date = [NSDate dateWithTimeIntervalSinceReferenceDate:location];
     NSString *label = [self.dateFormatter stringFromDate:date];
     return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
 }

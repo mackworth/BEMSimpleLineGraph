@@ -179,7 +179,7 @@
         CGPoint newPoint = CGPointMake(xValue, yValue);
         [self.points addObject:[NSValue valueWithCGPoint:newPoint]];
     }
-    if (!self.disableMainLine) {
+    if (!self.disableMainLine && self.points.count > 0 ) {
         line = [BEMLine pathWithPoints:self.points curved:self.bezierCurveIsEnabled open:YES];
     }
     fillBottom = [BEMLine pathWithPoints:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];

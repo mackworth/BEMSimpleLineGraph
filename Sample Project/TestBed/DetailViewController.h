@@ -18,6 +18,11 @@
 
 - (IBAction)refresh:(id)sender;
 
+@property (readonly) NSDate * oldestDate, * newestDate;
+@property (readonly) CGFloat smallestValue, biggestValue;
+@property (readonly) NSInteger numberOfPoints;
+@property (assign, nonatomic) float percentNulls;
+
 //data needed to implement delegate methods
 //@"" or negative float or NSNotFound or FALSE to indicate don't provide a delegate method
 @property (strong, nonatomic)  NSString *popUpText;
@@ -29,16 +34,16 @@
 @property (assign, nonatomic)  CGFloat   maxXValue;
 @property (assign, nonatomic)  CGFloat   minXValue;
 @property (assign, nonatomic)  BOOL      variableXAxis;
-@property (assign, nonatomic)  NSUInteger numberofXAxisLabels;
+@property (assign, nonatomic)  NSInteger numberofXAxisLabels;
 @property (assign, nonatomic)  BOOL      noDataLabel;
 @property (strong, nonatomic)  NSString *noDataText;
 @property (assign, nonatomic)  CGFloat   staticPaddingValue;
 @property (assign, nonatomic)  BOOL      provideCustomView;
-@property (assign, nonatomic)  NSUInteger numberOfGapsBetweenLabels;
-@property (assign, nonatomic)  NSUInteger baseIndexForXAxis;
-@property (assign, nonatomic)  NSUInteger incrementIndexForXAxis;
+@property (assign, nonatomic)  NSInteger numberOfGapsBetweenLabels;
+@property (assign, nonatomic)  NSInteger baseIndexForXAxis;
+@property (assign, nonatomic)  NSInteger incrementIndexForXAxis;
 @property (assign, nonatomic)  BOOL      provideIncrementPositionsForXAxis;
-@property (assign, nonatomic)  NSUInteger numberOfYAxisLabels;
+@property (assign, nonatomic)  NSInteger numberOfYAxisLabels;
 @property (strong, nonatomic)  NSString  *yAxisPrefix;
 @property (strong, nonatomic)  NSString  *yAxisSuffix;
 @property (assign, nonatomic)  CGFloat    baseValueForYAxis;
