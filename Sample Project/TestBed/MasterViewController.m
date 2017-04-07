@@ -471,8 +471,6 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     self.touchReportSwitch.on = self.myGraph.enableTouchReport;
     self.widthTouchInputLineField.floatValue = self.myGraph.widthTouchInputLine;
 
-    self.fontNameButton.titleLabel.text = self.myGraph.labelFont.fontName;
-    self.fontNameButton.titleLabel.font = self.myGraph.labelFont;
     self.fontSizeField.floatValue = self.myGraph.labelFont.pointSize;
     self.numberFormatField.text = self.myGraph.formatStringForValues;
 
@@ -911,6 +909,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     if (newFont) {
         self.myGraph.labelFont = newFont;
         self.fontNameButton.titleLabel.font = newFont;
+        [self.fontNameButton setTitle:fontName forState:UIControlStateNormal];
     }
 }
 
