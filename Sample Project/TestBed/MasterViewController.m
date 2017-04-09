@@ -151,6 +151,7 @@ static NSString * checkOn = @"☒";
 @property (strong, nonatomic) IBOutlet UIButton *animationGraphStyleButton;
 @property (strong, nonatomic) IBOutlet UITextField *animationEntranceTime;
 @property (strong, nonatomic) IBOutlet UISwitch *dotsWhileAnimateSwitch;
+@property (strong, nonatomic) IBOutlet UISwitch *userScalingSwitch;
 @property (strong, nonatomic) IBOutlet UISwitch *touchReportSwitch;
 @property (strong, nonatomic) IBOutlet UITextField *widthTouchInputLineField;
 
@@ -183,9 +184,6 @@ static NSString * checkOn = @"☒";
 @end
 
 @implementation MasterViewController
-
-static NSString * enableTouchReport = @"enableTouchReport";
-static NSString * lineChartPrefix = @"lineChart";
 
 CGGradientRef createGradient () {
     CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
@@ -267,6 +265,7 @@ self.myGraph.property = [defaults   type ##ForKey:@#property]; \
     RestoreProperty (sizePoint, float);
     RestoreProperty (widthTouchInputLine, float);
 
+    RestoreProperty (enableUserScaling, bool);
     RestoreProperty (enableTouchReport, bool);
     RestoreProperty (enablePopUpReport, bool);
     RestoreProperty (enableBezierCurve, bool);
@@ -360,6 +359,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     EncodeProperty (sizePoint, Float);
     EncodeProperty (widthTouchInputLine, Float);
 
+    EncodeProperty (enableUserScaling, Bool);
     EncodeProperty (enableTouchReport, Bool);
     EncodeProperty (enablePopUpReport, Bool);
     EncodeProperty (enableBezierCurve, Bool);
@@ -469,6 +469,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     self.animationEntranceTime.floatValue = self.myGraph.animationGraphEntranceTime;
     self.dotsWhileAnimateSwitch.on = self.myGraph.displayDotsWhileAnimating;
     self.touchReportSwitch.on = self.myGraph.enableTouchReport;
+    self.userScalingSwitch.on = self.myGraph.enableUserScaling;
     self.widthTouchInputLineField.floatValue = self.myGraph.widthTouchInputLine;
 
     self.fontSizeField.floatValue = self.myGraph.labelFont.pointSize;
@@ -873,6 +874,11 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 - (IBAction)displayDotsWhileAnimating:(UISwitch *)sender {
     self.myGraph.displayDotsWhileAnimating = sender.on;
+    [self.myGraph reloadGraph];
+}
+
+- (IBAction)enableUserScaling:(UISwitch *)sender {
+    self.myGraph.enableUserScaling = sender.on;
     [self.myGraph reloadGraph];
 }
 
