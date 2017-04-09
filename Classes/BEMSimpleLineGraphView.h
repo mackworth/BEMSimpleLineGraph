@@ -156,7 +156,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 @property (nonatomic) BEMLineAnimation animationGraphStyle;
 
 
-/// If set to YES, the graph will report the value of the closest point from the user current touch location. The 2 methods for touch event bellow should therefore be implemented. Default value is NO.
+/// If set to YES, the graph will report the value of the closest point from the user current touch location. The 2 methods for touch event below should therefore be implemented. Default value is NO.
 @property (nonatomic) BOOL enableTouchReport;
 
 
@@ -167,6 +167,10 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 
 /// If set to YES, a label will pop up on the graph when the user touches it. It will be displayed on top of the closest point from the user current touch location. Default value is NO.
 @property (nonatomic) BOOL enablePopUpReport;
+
+
+/// If set to YES, the graph will react to pinch/zoom gesture to allow user to focus on one section of data. When zoomed, panGesture means move graph and double-tap will restore scale. Default value is NO.
+@property (nonatomic) BOOL enableUserScaling;
 
 
 /// The way the graph is drawn, with or without bezier curved lines. Default value is NO.

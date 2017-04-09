@@ -92,8 +92,6 @@ float randomProbability () {
         date = [self dateForGraphAfterDate:date];
     }
     [self checkMaximums];
-    NSLog(@"dates: %@",self.arrayOfDates);
-    NSLog(@"values: %@",self.arrayOfValues);
 }
 
 -(void) checkMaximums {
@@ -343,7 +341,9 @@ float randomProbability () {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
     if (!self.myGraph.formatStringForValues.length) return;
-    self.customViewLabel.text = [NSString stringWithFormat:self.myGraph.formatStringForValues, [self lineGraph:graph valueForPointAtIndex:index] ];
+    CGFloat dotValue = [self lineGraph:graph valueForPointAtIndex:index] ;
+    if (dotValue >= BEMNullGraphValue) return;
+    self.customViewLabel.text = [NSString stringWithFormat:self.myGraph.formatStringForValues, dotValue];
 #pragma pop
 }
 

@@ -93,6 +93,21 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 /// This gesture recognizer picks up the initial touch on the graph view
 @property (strong, nonatomic) UILongPressGestureRecognizer *longPressGesture;
 
+@property (strong, nonatomic) UIPinchGestureRecognizer *zoomGesture;
+
+// set by zoomGesture to scale X axis
+@property (nonatomic) CGFloat lastScale;
+@property (nonatomic) CGFloat zoomAnchorPercentage;
+@property (nonatomic) CGFloat zoomMovementBase;
+@property (nonatomic) CGFloat zoomMovement;
+@property (nonatomic) CGFloat currentScale;
+
+//used to restore zoom
+@property (strong, nonatomic) UITapGestureRecognizer *doubleTapGesture;
+// set by doubleTap to remember previous scale
+@property (nonatomic) CGFloat doubleTapScale;
+@property (nonatomic) CGFloat doubleTapZoomMovement;
+
 /// The label displayed when enablePopUpReport is set to YES
 @property (strong, nonatomic) UILabel *popUpLabel;
 
@@ -160,6 +175,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
 
+    RestoreProperty (animationGraphEntranceTime, Float);
+    RestoreProperty (animationGraphStyle, Integer);
+    
     RestoreProperty (colorXaxisLabel, Object);
     RestoreProperty (colorYaxisLabel, Object);
     RestoreProperty (colorTop, Object);
@@ -185,6 +203,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     RestoreProperty (enableTouchReport, Bool);
     RestoreProperty (enablePopUpReport, Bool);
+    RestoreProperty (enableUserScaling, Bool);
     RestoreProperty (enableBezierCurve, Bool);
     RestoreProperty (enableXAxisLabel, Bool);
     RestoreProperty (enableYAxisLabel, Bool);
@@ -247,6 +266,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     EncodeProperty (enableTouchReport, Bool);
     EncodeProperty (enablePopUpReport, Bool);
+    EncodeProperty (enableUserScaling, Bool);
     EncodeProperty (enableBezierCurve, Bool);
     EncodeProperty (enableXAxisLabel, Bool);
     EncodeProperty (enableYAxisLabel, Bool);
@@ -318,6 +338,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     _formatStringForValues = @"%.0f";
     _interpolateNullValues = YES;
     _displayDotsOnly = NO;
+    _enableUserScaling = NO;
+    _lastScale = 1.0;
+    _zoomMovement = 0;
+    _zoomMovementBase = 0;
+    _doubleTapScale = 1.0;
+    _doubleTapZoomMovement = 0;
 
     // Initialize the various arrays
     xAxisLabelTexts = [NSMutableArray array];
@@ -354,6 +380,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
         // Setup the touch report
         [self layoutTouchReport];
+        [self startUserScaling];
 
         // Let the delegate know that the graph finished updates
         if ([self.delegate respondsToSelector:@selector(lineGraphDidFinishLoading:)])
@@ -369,6 +396,18 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     self.currentViewSize = self.bounds.size;
 
     [self drawGraph];
+}
+
+-(UIView *) viewForFirstBaselineLayout {
+    //necessary for iOS 8.x
+    if ([super respondsToSelector:@selector(viewForFirstBaselineLayout)]) {
+        return [super viewForFirstBaselineLayout];
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        return [super viewForBaselineLayout];
+#pragma clang diagnostic pop
+    }
 }
 
 -(void) clearGraph {
@@ -438,6 +477,34 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
 }
 
+- (void)startUserScaling {
+    if (self.enableUserScaling) {
+        if (!self.zoomGesture) {
+            self.lastScale = 1.0;
+            self.zoomGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handleZoomGestureAction:)];
+            self.zoomGesture.delegate = self;
+            [self.viewForFirstBaselineLayout addGestureRecognizer:self.zoomGesture];
+
+            self.doubleTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapGestureAction:)];
+            self.doubleTapGesture.delegate = self;
+            self.doubleTapGesture.numberOfTapsRequired = 2;
+            [self.viewForFirstBaselineLayout addGestureRecognizer:self.doubleTapGesture];
+        }
+    } else {
+        self.lastScale = 1.0;
+        if (self.zoomGesture) {
+            self.zoomGesture.delegate = nil;
+            [self.viewForFirstBaselineLayout removeGestureRecognizer:self.zoomGesture];
+            self.zoomGesture = nil;
+        }
+        if (self.doubleTapGesture) {
+            self.doubleTapGesture.delegate = nil;
+            [self.viewForFirstBaselineLayout removeGestureRecognizer:self.doubleTapGesture];
+            self.doubleTapGesture = nil;
+        }
+    }
+}
+
 - (void)layoutTouchReport {
     // If the touch report is enabled, set it up
     if (self.enableTouchReport == YES || self.enablePopUpReport == YES) {
@@ -463,6 +530,18 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             [self.panView addGestureRecognizer:self.longPressGesture];
         }
         [self addSubview:self.panView];
+    } else {
+        [self.touchInputLine removeFromSuperview];
+        if (self.panView) {
+            self.panGesture.delegate = nil;
+            [self.panView removeGestureRecognizer:self.panGesture];
+            self.panGesture = nil;
+            self.longPressGesture.delegate = nil;
+            [self.panView removeGestureRecognizer: self.longPressGesture];
+            self.longPressGesture = nil;
+            [self.panView removeFromSuperview];
+            self.panView = nil;
+        }
     }
 }
 
@@ -1285,7 +1364,13 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         } else {
             return NO;
         }
-        return YES;
+    } else if ([gestureRecognizer isEqual:self.zoomGesture]) {
+        ((UIPinchGestureRecognizer *)gestureRecognizer).scale = self.lastScale;
+        self.doubleTapScale = 1.0;
+        self.doubleTapZoomMovement = 0;
+        self.zoomMovementBase = [gestureRecognizer locationInView:self].x ;
+        self.zoomAnchorPercentage = self.zoomMovementBase / (self.frame.size.width - self.YAxisLabelXOffset);
+       return YES;
     } else {
         return [super gestureRecognizerShouldBegin:gestureRecognizer];
     }
@@ -1297,6 +1382,36 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
     return YES;
+}
+
+#pragma mark Handle zoom gesture
+- (void)handleZoomGestureAction:(UIPinchGestureRecognizer *)recognizer {
+    if (recognizer.scale >= 1.0 || self.lastScale != 1.0) {
+        self.lastScale = MAX(1.0, recognizer.scale);
+        if (recognizer.numberOfTouches > 1) { //avoid dragging when lifting fingers off
+            CGFloat currentX = [recognizer locationInView:self].x;
+            self.zoomMovement +=  currentX - self.zoomMovementBase;
+            self.zoomMovementBase = currentX;
+        }
+        CGFloat saveAnimation = self.animationGraphEntranceTime;
+        self.animationGraphEntranceTime = 0;
+        [self reloadGraph];
+        self.animationGraphEntranceTime = saveAnimation;
+    }
+}
+
+-(void)handleDoubleTapGestureAction:(UITapGestureRecognizer *) recognizer {
+    if (fabs(self.lastScale -1.0) < 0.01) {
+        self.lastScale = self.doubleTapScale;
+        self.zoomMovement = self.doubleTapZoomMovement ;
+        self.doubleTapScale = 1.0;
+    } else {
+        self.doubleTapZoomMovement = self.zoomMovement;
+        self.doubleTapScale = self.lastScale;
+        self.zoomMovement = 0;
+        self.lastScale = 1.0;
+    }
+    [self reloadGraph];
 }
 
 - (void)handleGestureAction:(UIGestureRecognizer *)recognizer {
@@ -1435,11 +1550,22 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     //now calculate point locations in view
     [xAxisValues removeAllObjects];
     CGFloat xAxisWidth = (self.frame.size.width - self.YAxisLabelXOffset);
-    CGFloat valueRange = self.maxXValue- self.minXValue;
+    if (self.lastScale <= 0.0) self.lastScale = 1.0;
+    CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
+    CGFloat valueRangeWidth = (totalValueRangeWidth) / self.lastScale;
+    CGFloat valueRangeBase = self.minXValue + self.zoomAnchorPercentage *(totalValueRangeWidth - valueRangeWidth);
+    self.currentScale = xAxisWidth/valueRangeWidth;
+    CGFloat maxXLocation = (self.maxXValue - valueRangeBase) * self.currentScale;
+    if (maxXLocation + self.zoomMovement < xAxisWidth )  {
+        self.zoomMovement = xAxisWidth - maxXLocation;
+    } else {
+        CGFloat minXLocation = (self.minXValue - valueRangeBase) * self.currentScale;
+        if (minXLocation + self.zoomMovement > 0) {
+            self.zoomMovement = -minXLocation;
+        }
+    }
     for (NSNumber * value in xAxisPoints) {
-        CGFloat xValue = value.floatValue;
-        CGFloat percent = (valueRange <= 0) ? 0.5 : (xValue - self.minXValue)/valueRange;
-        CGFloat positionOnXAxis = percent * xAxisWidth;
+        CGFloat positionOnXAxis = (value.floatValue - valueRangeBase) * self.currentScale + self.zoomMovement;
 
         [xAxisValues addObject:@(positionOnXAxis)];
     }
