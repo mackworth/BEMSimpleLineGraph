@@ -107,6 +107,7 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 // set by doubleTap to remember previous scale
 @property (nonatomic) CGFloat doubleTapScale;
 @property (nonatomic) CGFloat doubleTapZoomMovement;
+@property (nonatomic) CGFloat minDisplayedValue, maxDisplayedValue;
 
 /// The label displayed when enablePopUpReport is set to YES
 @property (strong, nonatomic) UILabel *popUpLabel;
@@ -496,6 +497,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             self.zoomGesture.delegate = nil;
             [self.viewForFirstBaselineLayout removeGestureRecognizer:self.zoomGesture];
             self.zoomGesture = nil;
+            [self drawEntireGraph];  // was on, now off, so need to redraw
         }
         if (self.doubleTapGesture) {
             self.doubleTapGesture.delegate = nil;
@@ -1386,13 +1388,43 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 #pragma mark Handle zoom gesture
 - (void)handleZoomGestureAction:(UIPinchGestureRecognizer *)recognizer {
-    if (recognizer.scale >= 1.0 || self.lastScale != 1.0) {
-        self.lastScale = MAX(1.0, recognizer.scale);
-        if (recognizer.numberOfTouches > 1) { //avoid dragging when lifting fingers off
-            CGFloat currentX = [recognizer locationInView:self].x;
-            self.zoomMovement +=  currentX - self.zoomMovementBase;
-            self.zoomMovementBase = currentX;
+    if (recognizer.numberOfTouches < 2) return;  //avoid dragging when lifting fingers off
+
+    CGFloat newScale = MAX(1.0, recognizer.scale);
+
+    CGFloat xAxisWidth = (self.frame.size.width - self.YAxisLabelXOffset);
+
+    CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
+    CGFloat valueRangeWidth = (totalValueRangeWidth) / newScale;
+    CGFloat valueRangeBase = self.minXValue + self.zoomAnchorPercentage *(totalValueRangeWidth - valueRangeWidth);
+    CGFloat currentScale = xAxisWidth/valueRangeWidth;
+
+    CGFloat maxXLocation = (self.maxXValue - valueRangeBase) * currentScale;
+
+    CGFloat currentX = [recognizer locationInView:self].x;
+   CGFloat newZoomMovement = self.zoomMovement + (self.zoomMovementBase- currentX);
+    if (maxXLocation + newZoomMovement < xAxisWidth )  {
+        newZoomMovement = xAxisWidth - maxXLocation;
+    } else {
+        CGFloat minXLocation = (self.minXValue - valueRangeBase) * currentScale;
+        if (minXLocation + newZoomMovement > 0) {
+            newZoomMovement = -minXLocation;
         }
+    }
+    CGFloat newValueRangeBase = valueRangeBase - newZoomMovement/currentScale;
+
+    if (![self.delegate respondsToSelector:@selector(lineGraph:shouldScaleFrom:to:showingFromXMinValue:toXMaxValue:)] ||
+        [self.delegate   lineGraph: self
+                   shouldScaleFrom: self.lastScale
+                                to: newScale
+              showingFromXMinValue: newValueRangeBase
+                       toXMaxValue: newValueRangeBase + valueRangeWidth]) {
+
+        self.zoomMovementBase = currentX;
+        self.lastScale = newScale;
+        self.zoomMovement = newZoomMovement;
+        self.minDisplayedValue = newValueRangeBase;
+        self.maxDisplayedValue = newValueRangeBase + valueRangeWidth;
         CGFloat saveAnimation = self.animationGraphEntranceTime;
         self.animationGraphEntranceTime = 0;
         [self reloadGraph];
@@ -1401,15 +1433,30 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 -(void)handleDoubleTapGestureAction:(UITapGestureRecognizer *) recognizer {
+
     if (fabs(self.lastScale -1.0) < 0.01) {
-        self.lastScale = self.doubleTapScale;
-        self.zoomMovement = self.doubleTapZoomMovement ;
-        self.doubleTapScale = 1.0;
+        if (![self.delegate respondsToSelector:@selector(lineGraph:shouldScaleFrom:to:showingFromXMinValue:toXMaxValue:)] ||
+            [self.delegate   lineGraph: self
+                       shouldScaleFrom: self.lastScale
+                                    to: self.doubleTapScale
+                  showingFromXMinValue: self.minDisplayedValue
+                           toXMaxValue: self.maxDisplayedValue]) {
+            self.lastScale = self.doubleTapScale;
+            self.zoomMovement = self.doubleTapZoomMovement ;
+            self.doubleTapScale = 1.0;
+            }
     } else {
-        self.doubleTapZoomMovement = self.zoomMovement;
-        self.doubleTapScale = self.lastScale;
-        self.zoomMovement = 0;
-        self.lastScale = 1.0;
+        if (![self.delegate respondsToSelector:@selector(lineGraph:shouldScaleFrom:to:showingFromXMinValue:toXMaxValue:)] ||
+            [self.delegate   lineGraph: self
+                       shouldScaleFrom: self.lastScale
+                                    to: 1.0
+                  showingFromXMinValue: self.minXValue
+                           toXMaxValue: self.maxXValue]) {
+            self.doubleTapZoomMovement = self.zoomMovement;
+            self.doubleTapScale = self.lastScale;
+            self.zoomMovement = 0;
+            self.lastScale = 1.0;
+            }
     }
     [self reloadGraph];
 }
@@ -1553,20 +1600,11 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (self.lastScale <= 0.0) self.lastScale = 1.0;
     CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
     CGFloat valueRangeWidth = (totalValueRangeWidth) / self.lastScale;
-    CGFloat valueRangeBase = self.minXValue + self.zoomAnchorPercentage *(totalValueRangeWidth - valueRangeWidth);
-    self.currentScale = xAxisWidth/valueRangeWidth;
-    CGFloat maxXLocation = (self.maxXValue - valueRangeBase) * self.currentScale;
-    if (maxXLocation + self.zoomMovement < xAxisWidth )  {
-        self.zoomMovement = xAxisWidth - maxXLocation;
-    } else {
-        CGFloat minXLocation = (self.minXValue - valueRangeBase) * self.currentScale;
-        if (minXLocation + self.zoomMovement > 0) {
-            self.zoomMovement = -minXLocation;
-        }
-    }
-    for (NSNumber * value in xAxisPoints) {
-        CGFloat positionOnXAxis = (value.floatValue - valueRangeBase) * self.currentScale + self.zoomMovement;
+    CGFloat currentScale = xAxisWidth/valueRangeWidth;
+    CGFloat valueRangeBase = self.minXValue + self.zoomAnchorPercentage *(totalValueRangeWidth - valueRangeWidth) + self.zoomMovement/currentScale;
 
+    for (NSNumber * value in xAxisPoints) {
+        CGFloat positionOnXAxis = (value.floatValue - valueRangeBase) * currentScale ;
         [xAxisValues addObject:@(positionOnXAxis)];
     }
 

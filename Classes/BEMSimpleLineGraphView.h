@@ -605,7 +605,14 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @return The number of labels displayed on the Y-axis. */
 - (NSInteger)numberOfXAxisLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
-
+/** Informs delegate of user request to zoom the chart and requests permission to proceed
+ @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. Only relevant if lineGraph:locationForPointAtIndex: is implemented. If implemented, it diverges labels from data points
+ @param oldScale The current scale level. 1.0 = autosized to fit all points. 2.0 would show half the chart
+ @param newScale New scale level requested by pinchZoom.
+ @param displayMinXValue The smallest datapoint that will be included in the chart (either index or value, depending on VariableXAxis).
+ @param displayMaxXValue The largest datapoint that will be included in the chart.
+ @return YES if zoom is ok; No if zoom is prevented. */
+-(BOOL) lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue;
 
 //----- Y AXIS -----//
 

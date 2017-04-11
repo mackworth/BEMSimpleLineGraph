@@ -29,6 +29,12 @@
 @property (strong, nonatomic) NSDateFormatter * dateFormatter;
 @property (strong, nonatomic) IBOutlet UIView * customView;
 @property (weak, nonatomic) IBOutlet UILabel * customViewLabel;
+
+@property (strong, nonatomic) NSDateFormatter * dateFormatterYears;
+@property (strong, nonatomic) NSDateFormatter * dateFormatterMonths;
+@property (strong, nonatomic) NSDateFormatter * dateFormatterDays;
+@property (strong, nonatomic) NSDateFormatter * dateFormatterHours;
+
 @end
 
 @implementation DetailViewController
@@ -50,13 +56,17 @@
     self.baseValueForYAxis = -1.0;
     self.incrementValueForYAxis = -1.0;
     self.dateFormatter =   [[NSDateFormatter alloc] init];
-    self.dateFormatter.dateFormat = @"MM/dd:HH";
+    self.dateFormatterYears =   [[NSDateFormatter alloc] init]; self.dateFormatterYears.dateFormat = @"MMM-YY";
+    self.dateFormatterMonths =   [[NSDateFormatter alloc] init]; self.dateFormatterMonths.dateFormat = @"MM/dd";
+    self.dateFormatterDays =   [[NSDateFormatter alloc] init]; self.dateFormatterDays.dateFormat = @"dd:HH";
+    self.dateFormatterHours =   [[NSDateFormatter alloc] init]; self.dateFormatterHours.dateFormat = @"HH:mm";
+    self.dateFormatter =  self.dateFormatterYears;
     self.variableXAxis = NO;
     self.percentNulls = .2;
 
     // Do any additional setup after loading the view.
 
-    self.graphObjectIncrement.value = 9;
+    self.graphObjectIncrement.value = 200;
 
     [self hydrateDatasets];
 
@@ -101,21 +111,20 @@ float randomProbability () {
     self.smallestValue = INFINITY;
     for (int i = 0; i < self.numberOfPoints; i++) {
         CGFloat value = self.arrayOfValues[i].floatValue;
-        NSDate * date = self.arrayOfDates[i];
         if (value < BEMNullGraphValue) {
             self.totalNumber = self.totalNumber + value;
             self.biggestValue = MAX(self.biggestValue,value );
             self.smallestValue = MIN(self.smallestValue,value );
         }
-        self.oldestDate = [self.oldestDate earlierDate:date];
-        self.newestDate = [self.newestDate laterDate:date]; //needs to be last for notification
     }
+    self.oldestDate = self.arrayOfDates[0];
+    self.newestDate = [self.arrayOfDates lastObject]; //needs to be last for notification
 
 }
 - (NSDate *)dateForGraphAfterDate:(NSDate *)date {
-    NSInteger numDays =  (NSInteger)(arc4random() % 6) +1 ;
-    NSTimeInterval secondsInTwentyFourHours = 24 * 60 * 60 * numDays;
-    NSDate *newDate = [date dateByAddingTimeInterval:secondsInTwentyFourHours];
+    CGFloat zeroToOne = arc4random() / (float) UINT_MAX;
+    CGFloat exponentialSeconds = -log(1-zeroToOne) ; //exponential dist with 1 second mean
+    NSDate *newDate = [date dateByAddingTimeInterval:exponentialSeconds* (7* 24 * 60 * 60)];
     return newDate;
 }
 
@@ -284,7 +293,7 @@ float randomProbability () {
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location {
     NSDate *date = [NSDate dateWithTimeIntervalSinceReferenceDate:location];
     NSString *label = [self.dateFormatter stringFromDate:date];
-    return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
+    return [label stringByAppendingString:@"  " ];
 }
 
 
@@ -421,6 +430,37 @@ float randomProbability () {
             self.labelDates.alpha = 1.0;
         } completion:nil];
     }];
+}
+-(BOOL) lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue {
+    NSLog(@"Scaling %0.2f from %f to %f", newScale, displayMinXValue, displayMaxXValue);
+    NSTimeInterval displayedRange = 0;
+    if (self.variableXAxis) {
+        displayedRange = MAX(displayMaxXValue - displayMinXValue,0);
+    } else {
+        NSUInteger minIndex = ceil(displayMinXValue);
+        NSUInteger maxIndex = ceil(displayMaxXValue);
+        if (minIndex < self.arrayOfDates.count && maxIndex < self.arrayOfDates.count) {
+            displayedRange = [self.arrayOfDates[maxIndex] timeIntervalSinceDate:self.arrayOfDates[minIndex]];
+        } else {
+            displayedRange = 0;
+        }
+    }
+    if (displayedRange <= 0) {
+        //problem, so use default
+        self.dateFormatter = self.dateFormatterYears;
+    } else if (displayedRange > 365*24*60*60) {
+        self.dateFormatter = self.dateFormatterMonths;
+
+    } else if (displayedRange > 30*24*60*60) {
+        self.dateFormatter = self.dateFormatterDays;
+
+    } else { // if (displayedRange > 24*60*60) {
+        self.dateFormatter = self.dateFormatterHours;
+    }
+    if (newScale > 0) {
+
+    }
+    return YES;
 }
 
 -(void) updateLabelsBelowGraph: (BEMSimpleLineGraphView *)graph {
