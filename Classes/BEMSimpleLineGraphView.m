@@ -624,12 +624,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 -(BEMCircle *) circleDotAtIndex:(NSUInteger) index forValue:(CGFloat) dotValue reuseNumber: (NSUInteger) reuseNumber {
-    CGFloat positionOnXAxis =  xAxisValues[index].floatValue;
-    if (self.positionYAxisRight == NO) {
-        positionOnXAxis += self.YAxisLabelXOffset;
-    }
-
-    CGFloat positionOnYAxis = yAxisValues[index].floatValue;
 
     BEMCircle *circleDot = nil;
     if (reuseNumber < self.circleDots.count) {
@@ -641,6 +635,18 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         return nil;
     }
 
+    CGFloat positionOnXAxis =  xAxisValues[index].floatValue;
+    if (positionOnXAxis < -self.sizePoint/2 ||
+        positionOnXAxis > self.frame.size.width + self.sizePoint/2) {
+        //off screen so not visible
+        [circleDot removeFromSuperview];
+        return nil;
+    }
+    if (self.positionYAxisRight == NO) {
+        positionOnXAxis += self.YAxisLabelXOffset;
+    }
+
+    CGFloat positionOnYAxis = yAxisValues[index].floatValue;
     CGRect dotFrame = CGRectMake(0, 0, self.sizePoint, self.sizePoint);
     if (circleDot) {
         circleDot.frame = dotFrame;
@@ -684,12 +690,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
                     [self adjustXLocForLabel:label avoidingDot:circleDot.frame];
 
-                    UILabel * leftNeighbor = (index >= 1 && self.permanentPopups[index-1].superview) ? self.permanentPopups[index-1] : nil;
-                    UILabel * secondNeighbor = (index >= 2 && self.permanentPopups[index-2].superview) ? self.permanentPopups[index-2] : nil;
                     BOOL showLabel =  [self adjustYLocForLabel:label
-                                                   avoidingDot:circleDot.frame
-                                                  andNeighbors:leftNeighbor.frame
-                                                           and:secondNeighbor.frame ];
+                                                       atIndex:index
+                                                   avoidingDot:circleDot.frame];
                     if (showLabel) {
                         [self addSubview:label];
                     } else {
@@ -728,6 +731,16 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             } else {
                 [label removeFromSuperview];
             }
+        }
+        //ensure all labels are above all dots;
+        BOOL seenBEMCircle = NO;
+        for (UIView  * view in [self.subviews reverseObjectEnumerator]) {
+            if ([view isKindOfClass:[BEMCircle class]]) {
+                seenBEMCircle = YES;
+            } else if (seenBEMCircle & [view isKindOfClass:[UILabel class]]) {
+                [view removeFromSuperview];
+                [self addSubview:view];
+            };
         }
         for (NSUInteger i = self.circleDots.count -1; i>=numberOfPoints; i--) {
             [[self.permanentPopups lastObject] removeFromSuperview]; //no harm if not showing
@@ -896,24 +909,28 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
     NSMutableArray *newXAxisLabels = [NSMutableArray array];
     @autoreleasepool {
+        BOOL usingLocation = [self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )];
+        BOOL locationLabels = usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)];
+        BOOL indexLabels =   !usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)];
+        CGFloat xAxisWidth = (self.frame.size.width - self.YAxisLabelXOffset);
+        CGFloat valueRangeWidth = (self.maxXValue - self.minXValue) / self.zoomScale;
+
         for (NSNumber *indexNum in axisIndices) {
             NSUInteger index = indexNum.unsignedIntegerValue;
             if (index >= allLabelLocations.count) continue;
             NSString *xAxisLabelText = @"";
-            if ([self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )]) {
-                if ([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)]) {
-                    CGFloat viewLoc = allLabelLocations[index].floatValue;
-                    CGFloat dataRange = self.maxXValue - self.minXValue;
-                    CGFloat dataLoc = viewLoc/xAxisWidth*dataRange + self.minXValue;
-
-                    xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForLocation:dataLoc];
-               }
-            } else if ([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)]) {
+            CGFloat positionOnXAxis = allLabelLocations[index].floatValue ;
+            if (locationLabels) {
+                if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth) {
+                //have to convert back to value from  viewLoc
+                    CGFloat realValue = self.minXDisplayedValue + valueRangeWidth * positionOnXAxis/xAxisWidth;
+                   //  CGFloat realValue = [self valueForDisplayPoint:positionOnXAxis];
+                    xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForLocation:realValue];
+                }
+            } else if (indexLabels) {
                 xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForIndex:index];
             }
             [xAxisLabelTexts addObject:xAxisLabelText];
-
-            CGFloat positionOnXAxis = allLabelLocations[index].floatValue ;
 
             UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:allLabelLocations[index].floatValue  reuseNumber: index];
 
@@ -1287,28 +1304,53 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     popUpLabel.center = CGPointMake(xCenter, popUpLabel.center.y);
 }
 
--(BOOL) adjustYLocForLabel: (UIView *) popUpLabel avoidingDot: (CGRect) dotFrame andNeighbors: (CGRect) leftNeightbor and:  (CGRect) secondNeighbor {
-    //returns YES if it can avoid those neighbors
-    //note: nil.frame == CGRectZero
+-(BOOL) adjustYLocForLabel: (UIView *) popUpLabel atIndex:(NSInteger) myIndex avoidingDot: (CGRect) dotFrame  {
+    //returns YES if it can avoid neighbors to left
+    //note: index < 0 for no checking neighbors
     //check for bumping into top OR overlap with left neighbors
     //default Y is above point
+    //check above and below dot
     CGFloat halfLabelHeight = popUpLabel.frame.size.height/2.0f;
     popUpLabel.center = CGPointMake(popUpLabel.center.x, CGRectGetMinY(dotFrame) - 12.0f - halfLabelHeight );
-    if (CGRectGetMinY(popUpLabel.frame) < 2.0f ||
-        (!CGRectIsEmpty(CGRectIntersection(popUpLabel.frame, leftNeightbor))) ||
-        (!CGRectIsEmpty(CGRectIntersection(popUpLabel.frame, secondNeighbor)))) {
-        //if so, try below point instead
+    CGFloat leftEdge = CGRectGetMinX(popUpLabel.frame);
+
+    if (CGRectGetMinY(popUpLabel.frame) > 2.0f) {
+        BOOL noConflict = YES;
+        for (NSInteger index = myIndex-1; index >=0; index --) {
+            UIView * neighbor = self.permanentPopups[index];
+            if (!neighbor.superview) continue;
+            if (leftEdge > CGRectGetMaxX(neighbor.frame)) {
+                return YES; //no conflicts found at all
+            }
+            if (!CGRectIsEmpty(CGRectIntersection(popUpLabel.frame, neighbor.frame))) {
+                noConflict = NO;
+                break; // conflict with neighbor
+            }
+        }
+        if (noConflict) return YES;
+    }
+    //conflict (or too high), try below point instead
     CGRect frame = popUpLabel.frame;
     frame.origin.y = CGRectGetMaxY(dotFrame)+12.0f;
     popUpLabel.frame = frame;
-        //check for bottom and again for overlap with neighbor and even neighbor second to the left
-        if (CGRectGetMaxY(frame) > (self.frame.size.height - self.XAxisLabelYOffset) ||
-            (!CGRectIsEmpty(CGRectIntersection(popUpLabel.frame, leftNeightbor))) ||
-            (!CGRectIsEmpty(CGRectIntersection(popUpLabel.frame, secondNeighbor)))) {
+    //check for bottom and again for overlap with neighbors
+    if (CGRectGetMaxY(frame) < (self.frame.size.height - self.XAxisLabelYOffset)) {
+        BOOL noConflict = YES;
+       for (NSInteger index = myIndex-1; index >=0; index --) {
+            UIView * neighbor = self.permanentPopups[index];
+           if (!neighbor.superview) continue;
+            if (leftEdge > CGRectGetMaxX(neighbor.frame)) {
+                return YES; //no conflicts found at all
+            }
+            if (!CGRectIsEmpty(CGRectIntersection(popUpLabel.frame, neighbor.frame))) {
+                noConflict = NO;
+                break; // conflict with neighbor
+            }
+        }
+        return noConflict;
+    } else {
         return NO;
     }
-}
-    return YES;
 }
 
 
@@ -1547,7 +1589,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             if (self.customPopUpView) {
                 [self addSubview:self.customPopUpView];
                 [self adjustXLocForLabel:self.customPopUpView avoidingDot:closestDot.frame];
-                [self adjustYLocForLabel:self.customPopUpView avoidingDot:closestDot.frame andNeighbors:CGRectZero and:CGRectZero];
+                [self adjustYLocForLabel:self.customPopUpView atIndex: -1 avoidingDot:closestDot.frame ];
                 if ([self.delegate respondsToSelector:@selector(lineGraph:modifyPopupView:forIndex:)]) {
                     self.customPopUpView.alpha = 1.0f;
                     [self.delegate lineGraph:self modifyPopupView:self.customPopUpView forIndex:index];
@@ -1563,7 +1605,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                 [self addSubview: self.popUpLabel ];
                 self.popUpLabel = [self configureLabel:self.popUpLabel forPoint:closestDot];
                 [self adjustXLocForLabel:self.popUpLabel avoidingDot:closestDot.frame];
-                [self adjustYLocForLabel:self.popUpLabel avoidingDot:closestDot.frame andNeighbors:CGRectZero and:CGRectZero];
+                [self adjustYLocForLabel:self.popUpLabel atIndex: -1 avoidingDot:closestDot.frame ];
                 [UIView animateWithDuration:0.2f delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
                     self.popUpLabel.alpha = 1.0f;
                 } completion:nil];
