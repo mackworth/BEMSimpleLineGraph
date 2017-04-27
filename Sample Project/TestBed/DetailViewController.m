@@ -55,18 +55,18 @@
     self.numberOfYAxisLabels = -1;
     self.baseValueForYAxis = -1.0;
     self.incrementValueForYAxis = -1.0;
-    self.dateFormatter =   [[NSDateFormatter alloc] init];
-    self.dateFormatterYears =   [[NSDateFormatter alloc] init]; self.dateFormatterYears.dateFormat = @"MMM-YY";
-    self.dateFormatterMonths =   [[NSDateFormatter alloc] init]; self.dateFormatterMonths.dateFormat = @"MM/dd";
-    self.dateFormatterDays =   [[NSDateFormatter alloc] init]; self.dateFormatterDays.dateFormat = @"dd:HH";
+    self.dateFormatterYears =   [[NSDateFormatter alloc] init]; self.dateFormatterYears.dateFormat = @"M-YY";
+    self.dateFormatterMonths =   [[NSDateFormatter alloc] init]; self.dateFormatterMonths.dateFormat = @"MMM/dd";
+    self.dateFormatterDays =   [[NSDateFormatter alloc] init]; self.dateFormatterDays.dateFormat = @"dd@HH";
     self.dateFormatterHours =   [[NSDateFormatter alloc] init]; self.dateFormatterHours.dateFormat = @"HH:mm";
-    self.dateFormatter =  self.dateFormatterYears;
+    self.dateFormatter =   [[NSDateFormatter alloc] init]; self.dateFormatter.dateFormat = @"M/d/yy";
+    //    self.dateFormatter =  self.dateFormatterYears;
     self.variableXAxis = NO;
     self.percentNulls = .2;
 
     // Do any additional setup after loading the view.
 
-    self.graphObjectIncrement.value = 200;
+    self.graphObjectIncrement.value = 1000;
 
     [self hydrateDatasets];
 
@@ -91,12 +91,14 @@ float randomProbability () {
     NSDate *date = [NSDate date];
     self.numberOfPoints = self.graphObjectIncrement.value;
     // Add objects to the array based on the stepper value
+    CGFloat lastValue = 5000;
     for (int i = 0; i < self.numberOfPoints; i++) {
         if (randomProbability() < self.percentNulls) {
             [self.arrayOfValues addObject: @(BEMNullGraphValue)];
         } else {
-            CGFloat value =[self getRandomFloat];
+            CGFloat value =MAX(lastValue + [self getRandomFloat]-500, 500);
             [self.arrayOfValues addObject:@(value)]; // Random values for the graph
+            lastValue = value;
         }
        [self.arrayOfDates addObject:date]; // Dates for the X-Axis of the graph
         date = [self dateForGraphAfterDate:date];
@@ -124,7 +126,7 @@ float randomProbability () {
 - (NSDate *)dateForGraphAfterDate:(NSDate *)date {
     CGFloat zeroToOne = arc4random() / (float) UINT_MAX;
     CGFloat exponentialSeconds = -log(1-zeroToOne) ; //exponential dist with 1 second mean
-    NSDate *newDate = [date dateByAddingTimeInterval:exponentialSeconds* (7* 24 * 60 * 60)];
+    NSDate *newDate = [date dateByAddingTimeInterval:exponentialSeconds* (30 * 24 * 60 * 60)];
     return newDate;
 }
 
@@ -145,11 +147,12 @@ float randomProbability () {
 // Refresh the line graph using the specified properties
 - (IBAction)refresh:(id)sender {
     [self hydrateDatasets];
+    self.myGraph.zoomScale = 1.0;
     [self.myGraph reloadGraph];
 }
 
 - (float)getRandomFloat {
-    float i1 = (float)(arc4random() % 1000000) / 100 ;
+    float i1 = (float)(arc4random() % 1000) ;
     return i1;
 }
 
@@ -161,6 +164,7 @@ float randomProbability () {
     }
     self.numberOfPoints = self.graphObjectIncrement.value;
     [self checkMaximums];
+    [self.myGraph reloadGraph];
 }
 
 - (void) addPointToGraph {
@@ -177,7 +181,6 @@ float randomProbability () {
     NSDate *lastDate = self.arrayOfDates.count > 0 ? [self.arrayOfDates lastObject]: [NSDate date];
     NSDate *newDate = [self dateForGraphAfterDate:lastDate];
     [self.arrayOfDates addObject:newDate];
-    [self.myGraph reloadGraph];
 }
 
 - (void) removePointFromGraph {
@@ -185,7 +188,6 @@ float randomProbability () {
         // Remove point
         [self.arrayOfValues removeObjectAtIndex:0];
         [self.arrayOfDates removeObjectAtIndex:0];
-        [self.myGraph reloadGraph];
     }
 }
 -(NSString *) formatNumber: (NSNumber *) number {
@@ -432,7 +434,7 @@ float randomProbability () {
     }];
 }
 -(BOOL) lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue {
-    NSLog(@"Scaling %0.2f from %f to %f", newScale, displayMinXValue, displayMaxXValue);
+    //  NSLog(@"Scaling %0.2f from %f to %f", newScale, displayMinXValue, displayMaxXValue);
     NSTimeInterval displayedRange = 0;
     if (self.variableXAxis) {
         displayedRange = MAX(displayMaxXValue - displayMinXValue,0);
@@ -449,16 +451,13 @@ float randomProbability () {
         //problem, so use default
         self.dateFormatter = self.dateFormatterYears;
     } else if (displayedRange > 365*24*60*60) {
-        self.dateFormatter = self.dateFormatterMonths;
-
+        self.dateFormatter = self.dateFormatterYears;
     } else if (displayedRange > 30*24*60*60) {
+        self.dateFormatter = self.dateFormatterMonths;
+    } else if (displayedRange > 4*24*60*60) {
         self.dateFormatter = self.dateFormatterDays;
-
     } else { // if (displayedRange > 24*60*60) {
         self.dateFormatter = self.dateFormatterHours;
-    }
-    if (newScale > 0) {
-
     }
     return YES;
 }

@@ -172,6 +172,14 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 /// If set to YES, the graph will react to pinch/zoom gesture to allow user to focus on one section of data. When zoomed, panGesture means move graph and double-tap will restore scale. Default value is NO.
 @property (nonatomic) BOOL enableUserScaling;
 
+/// Current zoom level; normally set by user through pinch/zoom gestures. Min value is 1.0, which means all data should be displayed.
+@property (nonatomic) CGFloat zoomScale;
+
+/// Current X-axis panned level; normally set by user through pinch/zoom gestures. If equal to minX, then graph displays at left edge. Note for indexed graphs, ok to set to partial value (e.g. 3.5 will start graph halway between datapoint at index 3 and one at index 4.
+@property (nonatomic) CGFloat minXDisplayedValue;
+
+/// For information, this contains maximum value that can be displayed at current zoom/panned level.
+@property (nonatomic, readonly) CGFloat maxXDisplayedValue;
 
 /// The way the graph is drawn, with or without bezier curved lines. Default value is NO.
 @property (nonatomic) IBInspectable BOOL enableBezierCurve;
