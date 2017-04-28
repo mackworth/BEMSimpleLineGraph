@@ -62,7 +62,7 @@
     self.dateFormatter =   [[NSDateFormatter alloc] init]; self.dateFormatter.dateFormat = @"M/d/yy";
     //    self.dateFormatter =  self.dateFormatterYears;
     self.variableXAxis = NO;
-    self.percentNulls = .2;
+    _percentNulls = .2;
 
     // Do any additional setup after loading the view.
 
@@ -207,6 +207,8 @@ float randomProbability () {
         controller.mode =               [self formatNumber:[calc calculatePointValueModeOnGraph:   self.myGraph]];
         controller.minimum =            [self formatNumber:[calc calculateMinimumPointValueOnGraph:self.myGraph]];
         controller.maximum =            [self formatNumber:[calc calculateMaximumPointValueOnGraph:self.myGraph]];
+        controller.area =               [self formatNumber:[calc calculateAreaUsingIntegrationMethod: BEMIntegrationMethodLeftReimannSum onGraph:self.myGraph xAxisScale:@(1)]];
+        controller.correlation =        [self formatNumber:[calc calculateCorrelationCoefficientUsingCorrelationMethod:BEMCorrelationMethodPearson onGraph:self.myGraph xAxisScale:@(1)]];
         controller.snapshotImage =      [self.myGraph graphSnapshotImage];
     }
 }

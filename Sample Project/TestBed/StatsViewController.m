@@ -25,17 +25,6 @@
     [self.presentingViewController dismissViewControllerAnimated:YES completion:nil];
 }
 
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    self.standardDeviationLabel.text = self.standardDeviation;
-    self.averageLabel.text = self.average;
-    self.medianLabel.text = self.median;
-    self.modeLabel.text = self.mode;
-    self.maximumLabel.text = self.maximum;
-    self.minimumLabel.text = self.minimum;
-    self.snapshotImageView.image = self.snapshotImage;
-}
-
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     static NSString *CellIdentifier = @"Cell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -64,6 +53,14 @@
     } else if (indexPath.row == 5) {
         cell.textLabel.text = self.minimum;
         cell.detailTextLabel.text = @"Minimum Value";
+        return cell;
+    } else if (indexPath.row == 6) {
+        cell.textLabel.text = self.area;
+        cell.detailTextLabel.text = @"Area under Graph";
+        return cell;
+    } else if (indexPath.row == 7) {
+        cell.textLabel.text = self.correlation;
+        cell.detailTextLabel.text = @"Correlation Coefficient";
         return cell;
     } else if (indexPath.row == 0  && indexPath.section == 1) {
         cell.textLabel.text = @"Rendered Snapshot";
