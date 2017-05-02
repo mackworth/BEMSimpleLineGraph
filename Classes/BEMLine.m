@@ -135,7 +135,8 @@
     for (NSUInteger i = 0; i < self.arrayOfPoints.count; i++) {
         CGFloat yValue = [self.arrayOfPoints[i] CGFloatValue];;
         CGFloat xValue =[self.arrayOfXValues[i] CGFloatValue];
-        if (self.arrayOfXValues && i < self.arrayOfXValues.count) xValue = self.arrayOfXValues[i].CGFloatValue;
+        if (xValue < 0 || xValue > CGRectGetMaxX(self.bounds)) continue;
+
         if (yValue >= BEMNullGraphValue  && self.interpolateNullValues) {
             //need to interpolate. For midpoints, just don't add a point
             if (i ==0) {
