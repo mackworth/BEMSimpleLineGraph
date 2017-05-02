@@ -170,7 +170,11 @@ float randomProbability () {
 - (void) addPointToGraph {
     // Add point
     NSNumber * newValue ;
+<<<<<<< ours
     if (randomProbability() < self.percentNulls) {
+=======
+    if (self.arrayOfValues.count % 6 == 0) {
+>>>>>>> theirs
         newValue = @(BEMNullGraphValue);
     } else {
         newValue = @([self getRandomFloat]);
