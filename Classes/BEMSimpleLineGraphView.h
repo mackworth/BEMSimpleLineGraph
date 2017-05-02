@@ -169,7 +169,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 @property (nonatomic) BOOL enablePopUpReport;
 
 
-/// If set to YES, the graph will react to pinch/zoom gesture to allow user to focus on one section of data. When zoomed, panGesture means move graph and double-tap will restore scale. Default value is NO.
+/// If set to YES, the graph will react to pinch/zoom gesture to allow user to focus on one section of data. When zoomed, double-finger paning means "move graph" and double-tap will restore scale. Default value is NO.
 @property (nonatomic) BOOL enableUserScaling;
 
 /// Current zoom level; normally set by user through pinch/zoom gestures. Min value is 1.0, which means all data should be displayed.
@@ -608,7 +608,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 - (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSUInteger)index;
 
 /** The total number of X-axis labels on the line graph.
- @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. Only relevant if lineGraph:locationForPointAtIndex: is implemented. If implemented, it diverges labels from data points
+ @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. If this and lineGraph:locationForPointAtIndex: are implemented, labels may diverge from data points
  @param graph The graph object which is requesting the number of labels.
  @return The number of labels displayed on the Y-axis. */
 - (NSInteger)numberOfXAxisLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph;

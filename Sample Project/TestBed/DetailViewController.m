@@ -289,9 +289,10 @@ float randomProbability () {
 
 
 - (NSString *)lineGraph:(BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index {
-    NSDate *date = self.arrayOfDates[index];
-    NSString *label = [self.dateFormatter stringFromDate:date];
-    return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
+    return [NSString stringWithFormat:@"%lu", index];
+//    NSDate *date = self.arrayOfDates[index];
+//    NSString *label = [self.dateFormatter stringFromDate:date];
+//    return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
 }
 
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location {
