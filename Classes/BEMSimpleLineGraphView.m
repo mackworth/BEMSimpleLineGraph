@@ -23,36 +23,29 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
     DotFirstTag100 = 100,
 };
 
-@interface BEMSimpleLineGraphView () {
-    /// The number of Points in the Graph
-    /// Set by layoutNumberofPoints
-    NSUInteger numberOfPoints;
+@interface BEMSimpleLineGraphView ()
 
-    /// All of the vertical Reference Line Locations
-    /// Set by drawXAxis and handed to BEMLine to draw Reference Lines
-    NSMutableArray <NSNumber *>*xReferenceLinePoints;
+#pragma mark Properties to store data and computed locations
+/// The number of Points in the Graph
+/// Set by layoutself.numberOfPoints
+@property (assign, nonatomic ) NSUInteger numberOfPoints;
 
-    /// All of the Y-Axis Label Points
-    /// Set by drawYAxis and handed to BEMLine to draw Reference Lines
-    NSMutableArray <NSNumber *> *yAxisLabelPoints;
+/// All of the Data Points from datasource (Y values)
+/// Set by getData and used throughout.
+@property (strong, nonatomic ) NSArray <NSNumber *> *dataPoints;
 
-    /// All of the Y-Axis Values as scaled to current view
-    // Set by getData; used by circleDotAtIndex, and handled to BEM to draw mainLine
-    NSMutableArray <NSNumber *>*yAxisValues;
+/// All of the X-Axis Points from datasource
+/// Set by getData and used throughout.
+@property (strong, nonatomic ) NSArray <NSNumber *> *xAxisPoints;
 
-    /// All of the X-Axis Values as scaled to current view
-    // Set by getData; used by circleDotAtIndex, and handled to BEM to draw mainLine
-    NSMutableArray <NSNumber *>*xAxisValues;
+/// All of the Y-Axis Values as scaled to current view
+// Set by getData; used by circleDotAtIndex, and handled to BEM to draw mainLine
+@property (strong, nonatomic ) NSArray <NSNumber *>*yLocations;
 
-    /// All of the Data Points from datasource
-    /// Set by getData and used throughout.
-    NSMutableArray <NSNumber *> *dataPoints;
+/// All of the X-Axis Values as scaled to current view
+// Set by getData; used by circleDotAtIndex, and handled to BEM to draw mainLine
+@property (strong, nonatomic ) NSArray <NSNumber *>*xLocations;
 
-    /// All of the X-Axis Points from datasource
-    /// Set by getData and used throughout.
-    NSMutableArray <NSNumber *> *xAxisPoints;
-
-}
 
 #pragma mark Properties to store main views (yAxis, xAxis, actual line, dots layer and labels layers
 // Stores the background X Axis view
@@ -70,19 +63,19 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 
 #pragma mark Properties to store all subviews; used to avoid recreating each time.
 /// All of the Y-Axis Labels
-@property (strong, nonatomic) NSMutableArray <UILabel *> *yAxisLabels;
+@property (strong, nonatomic) NSArray <UILabel *> *yAxisLabels;
 
 /// All of the X-Axis Labels
-@property (strong, nonatomic) NSMutableArray <UILabel *> *xAxisLabels;
+@property (strong, nonatomic) NSArray <UILabel *> *xAxisLabels;
 
 /// All of the X-Axis label texts (for testing)
-@property (strong, nonatomic) NSMutableArray <NSString *> *xAxisLabelTexts;
+@property (strong, nonatomic) NSArray <NSString *> *xAxisLabelTexts;
 
 /// All of the dataPoint Labels
-@property (strong, nonatomic) NSMutableArray <UILabel *> *permanentPopups;
+@property (strong, nonatomic) NSArray <UILabel *> *permanentPopups;
 
 /// All of the dataPoint dots
-@property (strong, nonatomic) NSMutableArray <BEMCircle *> *circleDots;
+@property (strong, nonatomic) NSArray <BEMCircle *> *circleDots;
 
 /// The vertical line which appears when the user drags across the graph
 @property (strong, nonatomic) UIView *touchInputLine;
@@ -115,7 +108,8 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 @property (nonatomic) CGFloat panMovement;
 
 //used during zoom to remember original anchor point and corresponding value
-@property (nonatomic) CGFloat zoomCenterLocation, zoomCenterValue;
+@property (nonatomic) CGFloat zoomCenterLocation;
+@property (nonatomic) CGFloat zoomCenterValue;
 
 //used to restore zoom
 @property (strong, nonatomic) UITapGestureRecognizer *doubleTapGesture;
@@ -346,20 +340,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     _zoomCenterLocation = 0;
     _zoomCenterValue = 0;
 
-    // Initialize the various arrays
-    xReferenceLinePoints = [NSMutableArray array];
-    yAxisValues = [NSMutableArray array];
-    xAxisValues = [NSMutableArray array];
-    yAxisLabelPoints = [NSMutableArray array];
-    dataPoints = [NSMutableArray array];
-    xAxisPoints = [NSMutableArray array];
-
-    _xAxisLabels = [NSMutableArray array];
-    _xAxisLabelTexts = [NSMutableArray array];
-    _yAxisLabels = [NSMutableArray array];
-    _permanentPopups = [NSMutableArray array];
-    _circleDots = [NSMutableArray array];
-
 
     // Initialize BEM Objects
     _averageLine = [[BEMAverageLine alloc] init];
@@ -380,7 +360,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     // Get the number of points in the graph
     [self layoutNumberOfPoints];
 
-    if (numberOfPoints <= 1) {
+    if (self.numberOfPoints <= 1) {
         return;
     } else {
         // Draw the graph
@@ -416,17 +396,17 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     // Get the total number of data points from the delegate
 #ifndef TARGET_INTERFACE_BUILDER
     if ([self.dataSource respondsToSelector:@selector(numberOfPointsInLineGraph:)]) {
-        numberOfPoints = [self.dataSource numberOfPointsInLineGraph:self];
+        self.numberOfPoints = [self.dataSource numberOfPointsInLineGraph:self];
     } else {
-        numberOfPoints = 0;
+        self.numberOfPoints = 0;
     }
 #else
-    numberOfPoints = 10;
+    self.numberOfPoints = 10;
 #endif
     [self.noDataLabel removeFromSuperview];
     [self.oneDot  removeFromSuperview];
 
-   if (numberOfPoints == 0) {
+   if (self.self.numberOfPoints == 0) {
        // There are no points to load
         [self clearGraph];
         if (self.delegate &&
@@ -454,7 +434,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             [self.delegate lineGraphDidFinishLoading:self];
        }
 
-    } else if (numberOfPoints == 1) {
+    } else if (self.self.numberOfPoints == 1) {
         NSLog(@"[BEMSimpleLineGraph] Data source contains only one data point. Add more data to the data source and then reload the graph.");
         [self clearGraph];
         BEMCircle *circleDot = [[BEMCircle alloc] initWithFrame:CGRectMake(0, 0, self.sizePoint, self.sizePoint)];
@@ -623,7 +603,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         widestNumber = MAX([self labelWidthForValue:self.maxYValue],
                            [self labelWidthForValue:self.minYValue]);
     } else {
-        widestNumber  = [self labelWidthForValue:self.bounds.size.height] ;
+        widestNumber  = [self labelWidthForValue:CGRectGetMaxY(self.backgroundYAxis.bounds)] ;
     }
     if (self.averageLine.enableAverageLine) {
         return MAX(widestNumber,    [self.averageLine.title sizeWithAttributes:attributes].width);
@@ -632,35 +612,37 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
 }
 
--(BEMCircle *) circleDotAtIndex:(NSUInteger) index forValue:(CGFloat) dotValue reuseNumber: (NSUInteger) reuseNumber {
+-(BEMCircle *) circleDotAtIndex:(NSUInteger) index   {
 
-    BEMCircle *circleDot = nil;
+    BEMCircle * circleDot = nil;
     CGRect dotFrame = CGRectMake(0, 0, self.sizePoint, self.sizePoint);
-   if (reuseNumber < self.circleDots.count) {
-        circleDot = self.circleDots[reuseNumber];
+    if (index < self.circleDots.count) {
+        circleDot = self.circleDots[index];
         circleDot.frame = dotFrame;
         [circleDot setNeedsDisplay];
     } else {
         circleDot = [[BEMCircle alloc] initWithFrame:dotFrame];
-        [self.circleDots addObject:circleDot];
     }
+    circleDot.frame = dotFrame;
     circleDot.tag = (NSInteger) index + DotFirstTag100;
-    circleDot.absoluteValue = dotValue;
+    [self.dotsView addSubview:circleDot];
 
+    CGFloat dotValue = self.dataPoints[index].floatValue;
+    circleDot.absoluteValue = dotValue;
     if (dotValue >= BEMNullGraphValue) {
         // If we're dealing with an null value, don't draw the dot (but put it in yAxis to interpolate line)
         [circleDot removeFromSuperview];
-        return nil;
+        return circleDot;
     }
 
-    CGFloat positionOnXAxis =  xAxisValues[index].floatValue;
+    CGFloat positionOnXAxis =  self.xLocations[index].floatValue;
     if (positionOnXAxis < 0 ||  positionOnXAxis > self.dotsView.bounds.size.width ) {
         //off screen so not visible
         [circleDot removeFromSuperview];
-        return nil;
+        return circleDot;
     }
 
-    CGFloat positionOnYAxis = yAxisValues[index].floatValue;
+    CGFloat positionOnYAxis = self.yLocations[index].floatValue;
     circleDot.center = CGPointMake(positionOnXAxis, positionOnYAxis);
     circleDot.color = self.colorPoint;
 
@@ -670,36 +652,29 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 - (void)drawDots {
 
     // Loop through each point and add it to the graph
+    NSMutableArray <UIView *> *newPopups = [NSMutableArray arrayWithCapacity:self.numberOfPoints];
+    NSMutableArray <UIView *> *newDots = [NSMutableArray arrayWithCapacity:self.numberOfPoints];
     @autoreleasepool {
-        for (NSUInteger index = 0; index < numberOfPoints; index++) {
-            CGFloat dotValue = dataPoints[index].floatValue;
-            BEMCircle * circleDot = [self circleDotAtIndex: index forValue: dotValue reuseNumber: index];
+        for (NSUInteger index = 0; index < self.numberOfPoints; index++) {
+
+            BEMCircle * circleDot = [self circleDotAtIndex: index];
+            [newDots addObject:circleDot];
+
             UILabel * label = nil;
             if (index < self.permanentPopups.count) {
                 label = self.permanentPopups[index];
             } else {
                 label = [[UILabel alloc] initWithFrame:CGRectZero];
-                [self.permanentPopups addObject:label ];
             }
+            [newPopups addObject:label ];
 
-            if (circleDot) {
-                [self.dotsView addSubview:circleDot];
+            if (circleDot.superview) {
 
                 if ((self.alwaysDisplayPopUpLabels == YES)  &&
                     (![self.delegate respondsToSelector:@selector(lineGraph:alwaysDisplayPopUpAtIndex:)] ||
                       [self.delegate lineGraph:self alwaysDisplayPopUpAtIndex:index])) {
                     label = [self configureLabel:label forPoint: circleDot ];
 
-                    [self adjustXLocForLabel:label avoidingDot:circleDot.frame];
-
-                    BOOL showLabel =  [self adjustYLocForLabel:label
-                                                       atIndex:index
-                                                   avoidingDot:circleDot.frame];
-                    if (showLabel) {
-                        [self.labelsView addSubview:label];
-                    } else {
-                        [label removeFromSuperview];
-                    }
                 } else {
                     //not showing labels this time, so remove if any
                     [label removeFromSuperview];
@@ -724,7 +699,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                                      }
                                      completion:nil ];
                 } else if (label || self.displayDotsWhileAnimating || self.alwaysDisplayDots) {
-                    [UIView animateWithDuration: MAX(0.3,self.animationGraphEntranceTime/numberOfPoints)
+                    [UIView animateWithDuration: MAX(0.3,self.animationGraphEntranceTime/self.numberOfPoints)
                                           delay: self.animationGraphEntranceTime*(circleDot.center.x/CGRectGetMaxX(self.dotsView.bounds))
                                         options:UIViewAnimationOptionCurveLinear
                         animations:^{
@@ -747,12 +722,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                 [label removeFromSuperview];
             }
         }
-        for (NSUInteger i = self.circleDots.count -1; i>=numberOfPoints; i--) {
-            [[self.permanentPopups lastObject] removeFromSuperview]; //no harm if not showing
-            [self.permanentPopups removeLastObject];
-            [[self.circleDots lastObject] removeFromSuperview];
-            [self.circleDots removeLastObject];
+        for (NSUInteger i = self.numberOfPoints; i < self.circleDots.count;  i++) {
+            [self.permanentPopups[i] removeFromSuperview]; //no harm if not showing
+            [self.circleDots [i] removeFromSuperview];
         }
+        self.permanentPopups = [newPopups copy]; //save for next time
+        self.circleDots = [newDots copy];
     }
 }
 
@@ -771,8 +746,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     line.referenceLineWidth = self.widthReferenceLines > 0.0 ? self.widthReferenceLines : (self.widthLine/2);
     line.lineAlpha = self.alphaLine;
     line.bezierCurveIsEnabled = self.enableBezierCurve;
-    line.arrayOfPoints = yAxisValues;
-    line.arrayOfXValues = xAxisValues;
+    line.arrayOfPoints = self.yLocations;
+    line.arrayOfXValues = self.xLocations;
     line.lineDashPatternForReferenceYAxisLines = self.lineDashPatternForReferenceYAxisLines;
     line.lineDashPatternForReferenceXAxisLines = self.lineDashPatternForReferenceXAxisLines;
     line.interpolateNullValues = self.interpolateNullValues;
@@ -786,8 +761,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (self.enableReferenceXAxisLines || self.enableReferenceYAxisLines) {
         line.enableReferenceLines = YES;
         line.referenceLineColor = self.colorReferenceLines;
-        line.arrayOfVerticalReferenceLinePoints = self.enableReferenceXAxisLines ? xReferenceLinePoints : nil;
-        line.arrayOfHorizontalReferenceLinePoints = self.enableReferenceYAxisLines ? yAxisLabelPoints : nil;
+        //Note that arrayOfVerticalReferenceLinePioints (and horizontal) must be set already by drawYaxis and drawXAxis
     } else {
         line.enableReferenceLines = NO;
     }
@@ -810,15 +784,15 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (void)drawXAxis {
-    [self.xAxisLabelTexts removeAllObjects];
-    [xReferenceLinePoints removeAllObjects];
+
+    for (UILabel * label in self.xAxisLabels) {
+        [label removeFromSuperview];
+    }
+    self.xAxisLabels = nil;
 
     if (!self.enableXAxisLabel) {
         [self.backgroundXAxis removeFromSuperview];
-        for (UILabel * label in self.xAxisLabels) {
-            [label removeFromSuperview];
-        }
-        self.xAxisLabels = [NSMutableArray array];
+        self.masterLine.arrayOfVerticalReferenceLinePoints = [NSArray array];
         return;
     }
     if (!([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)] ||
@@ -858,13 +832,13 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             CGFloat step = indicesDisplayed / (numberLabels-1);
             CGFloat currIndex = ceil(self.minXDisplayedValue);
             for (NSInteger i = 0; i < numberLabels; i++) {
-                [labelLocs addObject:xAxisValues[(NSInteger)currIndex]];
+                [labelLocs addObject:self.xLocations[(NSInteger)currIndex]];
                 currIndex += step;
             }
         }
         allLabelLocations = [NSArray arrayWithArray:labelLocs];
     } else {
-        allLabelLocations = [NSArray arrayWithArray:xAxisValues];
+        allLabelLocations = [NSArray arrayWithArray:self.xLocations];
     }
 
     NSArray <NSNumber *> *axisIndices = nil;
@@ -878,18 +852,19 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             increment = [self.delegate incrementIndexForXAxisOnLineGraph:self];
         } else if ([self.delegate respondsToSelector:@selector(numberOfGapsBetweenLabelsOnLineGraph:)]) {
             increment = [self.delegate numberOfGapsBetweenLabelsOnLineGraph:self] + 1;
-            if (increment >= numberOfPoints -1) {
+            if (increment >= self.numberOfPoints -1) {
                 //need at least two points
                 baseIndex = 0;
-                increment = numberOfPoints - 1;
+                increment = self.numberOfPoints - 1;
             } else {
                 NSUInteger leftGap = increment - 1;
-                NSUInteger rightGap = numberOfPoints % increment;
+                NSUInteger rightGap = self.numberOfPoints % increment;
                 NSUInteger offset = (leftGap-rightGap)/2;
                 baseIndex = increment - 1 - offset;
             }
         }
         if (increment == 0) increment = 1;
+
         NSMutableArray <NSNumber *> *values = [NSMutableArray array ];
         NSUInteger index = baseIndex;
         while (index < allLabelLocations.count) {
@@ -899,10 +874,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         axisIndices = [values copy];
     }
 
-    for (UILabel * label in self.xAxisLabels) {
-        [label removeFromSuperview];
-    }
-    NSMutableArray *newXAxisLabels = [NSMutableArray array];
+    NSMutableArray <NSNumber *> *newReferenceLinePoints = [NSMutableArray arrayWithCapacity:axisIndices.count];;
+    NSMutableArray <NSString *> *newAxisLabelTexts =      [NSMutableArray arrayWithCapacity:axisIndices.count];
+    NSMutableArray <UIView *>   *newXAxisLabels =         [NSMutableArray arrayWithCapacity:axisIndices.count];
+
     @autoreleasepool {
         BOOL usingLocation = [self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )];
         BOOL locationLabels = usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)];
@@ -924,48 +899,45 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             } else {
                 NSInteger realIndex = (NSInteger)(round(realValue));
                 if (realIndex < 0) realIndex = 0;
-                if ((NSUInteger)realIndex >= numberOfPoints) realIndex = numberOfPoints - 1;
+                if ((NSUInteger)realIndex >= self.numberOfPoints) realIndex = self.numberOfPoints - 1;
                 if (indexLabels) {
                     xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForIndex:realIndex ];
                 } else {
                     xAxisLabelText = [NSString stringWithFormat:@"%lu", realIndex];
                 }
-
             }
-            [self.xAxisLabelTexts addObject:xAxisLabelText];
+            [newAxisLabelTexts addObject:xAxisLabelText];
 
             UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:allLabelLocations[index].floatValue  reuseNumber: index];
+            [newXAxisLabels addObject:labelXAxis];
 
-            if (dataPoints[index].floatValue < BEMNullGraphValue || self.interpolateNullValues) {
-                [xReferenceLinePoints addObject:@(positionOnXAxis)];
-            }
             if (CGRectContainsRect(self.backgroundXAxis.bounds, labelXAxis.frame)){
                 [self.backgroundXAxis addSubview:labelXAxis];
+                if (self.enableReferenceXAxisLines &&
+                    (self.dataPoints[index].floatValue < BEMNullGraphValue || self.interpolateNullValues)) {
+                    [newReferenceLinePoints addObject:@(positionOnXAxis)];
+                }
             }
-            [newXAxisLabels addObject:labelXAxis];
         }
     }
-    self.xAxisLabels = newXAxisLabels;
+    self.xAxisLabels = [newXAxisLabels copy];
+    self.xAxisLabelTexts = [newAxisLabelTexts copy];
+    self.masterLine.arrayOfVerticalReferenceLinePoints = [newReferenceLinePoints copy];
 
-    __block UILabel *prevLabel;
+    UILabel *prevLabel = nil;
 
-    NSMutableArray <UILabel *> *overlapLabels = [NSMutableArray arrayWithCapacity:self.xAxisLabels.count];
-    [self.xAxisLabels enumerateObjectsUsingBlock:^(UILabel *label, NSUInteger idx, BOOL *stop) {
-        if (idx == 0) {
+    for (UILabel *label in self.xAxisLabels) {
+        if (label == self.xAxisLabels[0]) {
             prevLabel = label; //always show first label
         } else if (label.superview) { //only look at active labels
                                       //allow at least five points betwen labels
             if (CGRectGetMaxX(prevLabel.frame) + 5 < CGRectGetMinX( label.frame))  {
                 prevLabel = label;  //no overlap and inside frame, so show this one
             } else {
-                [overlapLabels addObject:label]; // Overlapped
+                [label removeFromSuperview]; // Overlapped
             }
         }
-    }];
-
-    for (UILabel *l in overlapLabels) {
-        [l removeFromSuperview];
-    }
+    };
 }
 
 - (NSString *)xAxisTextForIndex:(NSUInteger)index {
@@ -991,7 +963,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         labelXAxis = self.xAxisLabels[xAxisLabelNumber];
     } else {
         labelXAxis = [[UILabel alloc] init];
-        [self.xAxisLabels addObject:labelXAxis];
     }
 
     labelXAxis.text = text;
@@ -1050,7 +1021,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         labelYAxis = self.yAxisLabels[reuseNumber];
     } else {
         labelYAxis = [[UILabel alloc] initWithFrame:frameForLabelYAxis];
-        [self.yAxisLabels addObject:labelYAxis];
     }
 
     labelYAxis.frame = frameForLabelYAxis;
@@ -1062,13 +1032,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     CGFloat yAxisPosition = [self yPositionForDotValue:value];
     labelYAxis.center = CGPointMake(xValueForCenterLabelYAxis, yAxisPosition);
 
-    NSNumber *yAxisLabelCoordinate = @(labelYAxis.center.y);
-    [yAxisLabelPoints addObject:yAxisLabelCoordinate];
     return labelYAxis;
 }
 
 - (void)drawYAxis {
-    [yAxisLabelPoints removeAllObjects];
 
     if (!self.enableYAxisLabel) {
         [self.backgroundYAxis removeFromSuperview];
@@ -1077,7 +1044,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         for (UILabel * label in self.yAxisLabels) {
             [label removeFromSuperview];
         }
-        self.yAxisLabels = [NSMutableArray array];
+        self.yAxisLabels = nil;
         return;
     }
 
@@ -1097,22 +1064,22 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
 
     //Now calculate baseValue and increment for all scenarios
-    CGFloat value;
+    CGFloat dotValue;
     CGFloat increment;
     if (self.autoScaleYAxis) {
         // Plot according to min-max range
 
         if (numberOfLabels == 1) {
-            value = (self.minYValue + self.maxYValue)/2.0f;
+            dotValue = (self.minYValue + self.maxYValue)/2.0f;
             increment = 0; //NA
         } else {
-            value = self.minYValue;
+            dotValue = self.minYValue;
             increment = (self.maxYValue - self.minYValue)/(numberOfLabels-1);
             if ([self.delegate respondsToSelector:@selector(baseValueForYAxisOnLineGraph:)] && [self.delegate respondsToSelector:@selector(incrementValueForYAxisOnLineGraph:)]) {
-                value = [self.delegate baseValueForYAxisOnLineGraph:self];
+                dotValue = [self.delegate baseValueForYAxisOnLineGraph:self];
                 increment = [self.delegate incrementValueForYAxisOnLineGraph:self];
                 if (increment <= 0) increment = 1;
-                numberOfLabels = (NSUInteger) ((self.maxYValue - value)/increment)+1;
+                numberOfLabels = (NSUInteger) ((self.maxYValue - dotValue)/increment)+1;
                 if (numberOfLabels > 100) {
                     NSLog(@"[BEMSimpleLineGraph] Increment does not properly lay out Y axis, bailing early");
                     return;
@@ -1123,75 +1090,63 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         //not AutoScale
         CGFloat graphHeight = self.backgroundYAxis.bounds.size.height;
         if (numberOfLabels == 1) {
-            value = graphHeight/2.0f;
+            dotValue = graphHeight/2.0f;
             increment = 0; //NA
         } else {
             increment = graphHeight / numberOfLabels;
-            value = increment/2;
+            dotValue = increment/2;
         }
     }
-    NSMutableArray <NSNumber *> *dotValues = [[NSMutableArray alloc] initWithCapacity:numberOfLabels];
-    for (NSUInteger i = 0; i < numberOfLabels; i++) {
-        [dotValues addObject:@(value)];
-        value += increment;
-    }
-    NSUInteger yAxisLabelNumber = 0;
+    NSMutableArray <UIView *>   *newLabels = [NSMutableArray arrayWithCapacity:numberOfLabels];
+    NSMutableArray <NSNumber *> *newPoints = [NSMutableArray arrayWithCapacity:numberOfLabels];
+
     @autoreleasepool {
-        for (NSNumber *dotValueNum in dotValues) {
-            CGFloat dotValue = dotValueNum.floatValue;
+        for (NSUInteger index = 0; index < numberOfLabels; index++) {
             NSString *labelText = [self yAxisTextForValue:dotValue];
             UILabel *labelYAxis = [self yAxisLabelWithText:labelText
                                                    atValue:dotValue
-                                               reuseNumber:yAxisLabelNumber];
+                                               reuseNumber:index];
 
             [self.backgroundYAxis addSubview:labelYAxis];
-            yAxisLabelNumber++;
-        }
-    }
-
-    for (NSUInteger i = self.yAxisLabels.count -1; i>=yAxisLabelNumber; i--) {
-        [[self.yAxisLabels lastObject] removeFromSuperview];
-        [self.yAxisLabels removeLastObject];
-    }
-
-    // Detect overlapped labels
-    __block UILabel * prevLabel = nil;;
-    NSMutableArray <UILabel *> *overlapLabels = [NSMutableArray arrayWithCapacity:0];
-
-    [self.yAxisLabels enumerateObjectsUsingBlock:^(UILabel *label, NSUInteger idx, BOOL *stop) {
-
-        if (idx == 0) {
-            prevLabel = label; //always show first label
-        } else if (label.superview) { //only look at active labels
-            if (CGRectIsNull(CGRectIntersection(prevLabel.frame, label.frame)) &&
-                CGRectContainsRect(self.backgroundYAxis.bounds, label.frame)) {
-                prevLabel = label;  //no overlap and inside frame, so show this one
-            } else {
-                [overlapLabels addObject:label]; // Overlapped
+            [newLabels addObject:labelYAxis];
+            if (self.enableReferenceYAxisLines) {
+                [newPoints addObject:@(labelYAxis.center.y)];
             }
+            dotValue += increment;
         }
-    }];
+    }
+    for (NSUInteger index = numberOfLabels; index < self.yAxisLabels.count ; index++) {
+        [self.yAxisLabels[index] removeFromSuperview];
+    }
 
-
+    UILabel * averageLabel = nil;
     if (self.averageLine.enableAverageLine && self.averageLine.title.length > 0) {
-
-        UILabel *averageLabel = [self yAxisLabelWithText:self.averageLine.title
+        self.averageLine.yValue = self.getAverageValue;
+        averageLabel = [self yAxisLabelWithText:self.averageLine.title
                                                  atValue:self.averageLine.yValue
                                              reuseNumber:NSIntegerMax];
 
         [self.backgroundYAxis addSubview:averageLabel];
+    } else {
+        [self.averageLine.label removeFromSuperview];
+    }
+    self.averageLine.label = averageLabel;
 
-        //check for overlap; Average wins
-        for (UILabel * label in self.yAxisLabels) {
-            if (! CGRectIsNull(CGRectIntersection(averageLabel.frame, label.frame))) {
-                [overlapLabels addObject:label];
-            }
+    // Detect overlapped labels
+    UILabel * prevLabel = nil;
+    for (UILabel * label in newLabels) {
+        if (label == newLabels[0] || //always show first label
+            (CGRectIsNull(CGRectIntersection(prevLabel.frame,              label.frame)) &&
+             CGRectIsNull(CGRectIntersection(averageLabel.frame,           label.frame)) &&
+             CGRectContainsRect(self.backgroundYAxis.bounds,               label.frame))) {
+            prevLabel = label;  //no overlap and inside frame, so show this one
+        } else {
+            [label removeFromSuperview];  // Overlapped
         }
-    }
+    };
 
-    for (UILabel *label in overlapLabels) {
-        [label removeFromSuperview];
-    }
+    self.yAxisLabels =      [newLabels copy];
+    self.masterLine.arrayOfHorizontalReferenceLinePoints = [newPoints copy];
 
 }
 
@@ -1228,7 +1183,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         if ([self.delegate respondsToSelector:@selector(popUpPrefixForlineGraph:)])
             prefix = [self.delegate popUpPrefixForlineGraph:self];
 
-        NSNumber *value = (index <= dataPoints.count) ? value = dataPoints[index] : @(0); // @((NSInteger) circleDot.absoluteValue)
+        NSNumber *value = (index <= self.dataPoints.count) ? value = self.dataPoints[index] : @(0); // @((NSInteger) circleDot.absoluteValue)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
         //note this can indeed crash if delegate provides junk for formatString (e.g. %@); try/catch doesn't work
@@ -1238,6 +1193,17 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
     CGSize requiredSize = [newPopUpLabel sizeThatFits:CGSizeMake(100.0f, CGFLOAT_MAX)];
     newPopUpLabel.frame = CGRectMake(10, 10, requiredSize.width+10.0f, requiredSize.height+10.0f);
+
+    [self adjustXLocForLabel:newPopUpLabel avoidingDot:circleDot.frame];
+
+    if ( [self adjustYLocForLabel:newPopUpLabel
+                          atIndex:index
+                       avoidingDot:circleDot.frame] ) {
+        [self.labelsView addSubview:newPopUpLabel];
+    } else {
+       [newPopUpLabel removeFromSuperview];
+    }
+
     return newPopUpLabel;
 }
 
@@ -1342,7 +1308,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (NSArray <NSNumber *> *)graphValuesForDataPoints {
-    return dataPoints;
+    return self.dataPoints;
 }
 
 - (NSArray <UILabel *> *)graphLabelsForXAxis {
@@ -1548,7 +1514,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (closestDot.tag > DotFirstTag100) {
         index = closestDot.tag - DotFirstTag100;
     } else {
-        if (numberOfPoints == 0) return; //something's very wrong
+        if (self.numberOfPoints == 0) return; //something's very wrong
     }
     closestDot.alpha = 0.8f;
 
@@ -1632,10 +1598,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 -(void) getData {
     // Remove all data points before adding them to the array
-    [dataPoints removeAllObjects];
-    [xAxisPoints removeAllObjects];
+    NSMutableArray <NSNumber *> * newXDataPoints = [NSMutableArray arrayWithCapacity:self.numberOfPoints];
+    NSMutableArray <NSNumber *> * newYDataPoints = [NSMutableArray arrayWithCapacity:self.numberOfPoints];
 
-    for (NSUInteger index = 0; index < numberOfPoints; index++) {
+    for (NSUInteger index = 0; index < self.numberOfPoints; index++) {
         CGFloat dotValue = 0;
 
     #ifndef TARGET_INTERFACE_BUILDER
@@ -1648,14 +1614,16 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     #else
         dotValue = (int)(arc4random() % 10000);
     #endif
-        [dataPoints addObject:@(dotValue)];
+        [newYDataPoints addObject:@(dotValue)];
 
         CGFloat xValue = index;
         if ([self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]){
             xValue = [self.delegate  lineGraph:self locationForPointAtIndex:index];
         }
-        [xAxisPoints addObject:@(xValue)];
+        [newXDataPoints addObject:@(xValue)];
     }
+    self.dataPoints = [newYDataPoints copy];
+    self.xAxisPoints = [newXDataPoints copy];
 
 #ifndef TARGET_INTERFACE_BUILDER
     self.maxYValue = [self getMaximumYValue];
@@ -1675,27 +1643,29 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     self.minYValue = 0.0f;
     self.maxYValue = 10000.0f;
     self.minXValue = 0;
-    self.maxXValue = numberOfPoints-1;
+    self.maxXValue = self.numberOfPoints-1;
 #endif
 
     //now calculate point locations in view
-    [xAxisValues removeAllObjects];
     CGFloat xAxisWidth = CGRectGetMaxX(self.dotsView.bounds);
     CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
     CGFloat valueRangeWidth = (totalValueRangeWidth) / self.zoomScale;
     CGFloat displayRatio = xAxisWidth/valueRangeWidth;
 
-    for (NSNumber * value in xAxisPoints) {
+    NSMutableArray <NSNumber *> * newXLocs = [NSMutableArray arrayWithCapacity:self.numberOfPoints];
+    NSMutableArray <NSNumber *> * newYLocs = [NSMutableArray arrayWithCapacity:self.numberOfPoints];
+    for (NSNumber * value in self.xAxisPoints) {
         CGFloat positionOnXAxis = (value.floatValue - self.minXDisplayedValue) * displayRatio ;
-        [xAxisValues addObject:@(positionOnXAxis)];
+        [newXLocs addObject:@(positionOnXAxis)];
     }
 
-    [yAxisValues removeAllObjects];
-    for (NSNumber * yValue in dataPoints) {
-        [yAxisValues addObject:@([self yPositionForDotValue:yValue.floatValue])];
+    for (NSNumber * yValue in self.dataPoints) {
+        [newYLocs addObject:@([self yPositionForDotValue:yValue.floatValue])];
     }
 
-    self.averageLine.yValue = self.getAverageValue;
+    self.xLocations = [newXLocs copy];
+    self.yLocations = [newYLocs copy];
+
 }
 
 - (CGFloat)getMaximumYValue {
@@ -1703,7 +1673,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         return [self.delegate maxValueForLineGraph:self];
     } else {
         CGFloat maxValue = -FLT_MAX;
-        for (NSNumber * value in dataPoints) {
+        for (NSNumber * value in self.dataPoints) {
             CGFloat dotValue = value.floatValue;
             if (dotValue >= BEMNullGraphValue) continue;
             if (dotValue > maxValue) maxValue = dotValue;
@@ -1717,7 +1687,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         return [self.delegate minValueForLineGraph:self];
     } else {
         CGFloat minValue = INFINITY;
-        for (NSNumber * value in dataPoints) {
+        for (NSNumber * value in self.dataPoints) {
             CGFloat dotValue = value.floatValue;
             if (dotValue >= BEMNullGraphValue) continue;
             if (dotValue < minValue) minValue = dotValue;
@@ -1731,7 +1701,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         return [self.delegate maxXValueForLineGraph:self];
     } else {
         CGFloat maxValue = -FLT_MAX;
-        for (NSNumber * value in xAxisPoints) {
+        for (NSNumber * value in self.xAxisPoints) {
             CGFloat dotValue = value.floatValue;
             if (dotValue >= BEMNullGraphValue) continue;
             if (dotValue > maxValue) maxValue = dotValue;
@@ -1745,7 +1715,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         return [self.delegate minXValueForLineGraph:self];
     } else {
         CGFloat minValue = INFINITY;
-        for (NSNumber * value in xAxisPoints) {
+        for (NSNumber * value in self.xAxisPoints) {
             CGFloat dotValue = value.floatValue;
             if (dotValue >= BEMNullGraphValue) continue;
             if (dotValue < minValue) minValue = dotValue;
@@ -1760,7 +1730,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     } else {
         CGFloat sumValue = 0.0f;
         int numPoints = 0;
-        for (NSNumber * value in dataPoints) {
+        for (NSNumber * value in self.dataPoints) {
             CGFloat dotValue = value.floatValue;
             if (dotValue >= BEMNullGraphValue) continue;
             sumValue += dotValue;
