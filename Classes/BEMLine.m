@@ -10,19 +10,6 @@
 #import "BEMLine.h"
 #import "BEMSimpleLineGraphView.h"
 
-#if CGFLOAT_IS_DOUBLE
-#define CGFloatValue doubleValue
-#else
-#define CGFloatValue floatValue
-#endif
-
-
-@interface BEMLine()
-
-@property (nonatomic, strong) NSMutableArray <NSValue *> *points;
-
-@end
-
 @implementation BEMLine
 
 - (instancetype)initWithFrame:(CGRect)frame {
@@ -106,7 +93,6 @@
         }
     }
 
-
     //----------------------------//
     //----- Draw Average Line ----//
     //----------------------------//
@@ -122,55 +108,52 @@
         [averageLinePath addLineToPoint:finalPoint];
     }
 
-
     //----------------------------//
     //------ Draw Graph Line -----//
     //----------------------------//
     // LINE
-    UIBezierPath *line = [UIBezierPath bezierPath];
-    UIBezierPath *fillTop;
-    UIBezierPath *fillBottom;
-
-    self.points = [NSMutableArray arrayWithCapacity:self.arrayOfPoints.count];
-    for (NSUInteger i = 0; i < self.arrayOfPoints.count; i++) {
-        CGFloat yValue = [self.arrayOfPoints[i] CGFloatValue];;
-        CGFloat xValue =[self.arrayOfXValues[i] CGFloatValue];
+    NSUInteger numPoints = self.points.count;
+    NSMutableArray <NSValue *> *drawPoints = [NSMutableArray arrayWithCapacity:numPoints];
+    for (NSValue *value in self.points) {
+        CGPoint point = value.CGPointValue;
+        CGFloat xValue = point.x;
+        CGFloat yValue = point.y;
         if (xValue < 0 || xValue > CGRectGetMaxX(self.bounds)) continue;
 
         if (yValue >= BEMNullGraphValue  && self.interpolateNullValues) {
             //need to interpolate. For midpoints, just don't add a point
-            if (i ==0) {
+            if (value == self.points[0]) {
                 //extrapolate a left edge point from next two actual values
                 NSUInteger firstPos = 1; //look for first real value
-                while (firstPos < self.arrayOfPoints.count && [self.arrayOfPoints[firstPos] CGFloatValue] >= BEMNullGraphValue) firstPos++;
-                if (firstPos >= self.arrayOfPoints.count) break;  // all NaNs?? =>don't create any line
+                while (firstPos < numPoints && self.points[firstPos].CGPointValue.y >= BEMNullGraphValue) firstPos++;
+                if (firstPos >= numPoints) break;  // all NaNs?? =>don't create any line
 
-                CGFloat firstValue = [self.arrayOfPoints[firstPos] CGFloatValue];
+                CGFloat firstValue = self.points[firstPos].CGPointValue.y;
                 NSUInteger secondPos = firstPos+1; //look for second real value
-                while (secondPos < self.arrayOfPoints.count && [self.arrayOfPoints[secondPos] CGFloatValue] >= BEMNullGraphValue) secondPos++;
-                if (secondPos >= self.arrayOfPoints.count) {
+                while (secondPos < self.points.count && self.points[secondPos].CGPointValue.y >= BEMNullGraphValue) secondPos++;
+                if (secondPos >= numPoints) {
                     // only one real number
                     yValue = firstValue;
                 } else {
-                    CGFloat delta = firstValue - [self.arrayOfPoints[secondPos] CGFloatValue];
+                    CGFloat delta = firstValue - self.points[secondPos].CGPointValue.y;
                     yValue = firstValue + firstPos*delta/(secondPos-firstPos);
                 }
 
-            } else if (i == self.arrayOfPoints.count-1) {
+            } else if (value == self.points[numPoints-1]) {
                 //extrapolate a right edge poit from previous two actual values
-                NSInteger firstPos = i-1; //look for first real value
-                while (firstPos >= 0 && [self.arrayOfPoints[firstPos] CGFloatValue] >= BEMNullGraphValue) firstPos--;
+                NSInteger firstPos = numPoints-2; //look for first real value
+                while (firstPos >= 0 && self.points[firstPos].CGPointValue.y >= BEMNullGraphValue) firstPos--;
                 if (firstPos < 0 ) continue;  // all NaNs?? =>don't create any line; should already be gone
 
-                CGFloat firstValue = [self.arrayOfPoints[firstPos] CGFloatValue];
+                CGFloat firstValue = self.points[firstPos].CGPointValue.y;
                 NSInteger secondPos = firstPos-1; //look for second real value
-                while (secondPos >= 0 && [self.arrayOfPoints[secondPos] CGFloatValue] >= BEMNullGraphValue) secondPos--;
+                while (secondPos >= 0 && self.points[secondPos].CGPointValue.y >= BEMNullGraphValue) secondPos--;
                 if (secondPos < 0) {
                     // only one real number
                     yValue = firstValue;
                 } else {
-                    CGFloat delta = firstValue - [self.arrayOfPoints[secondPos] CGFloatValue];
-                    yValue = firstValue + (self.arrayOfPoints.count - firstPos-1)*delta/(firstPos - secondPos);
+                    CGFloat delta = firstValue - self.points[secondPos].CGPointValue.y;
+                    yValue = firstValue + (numPoints - firstPos-1)*delta/(firstPos - secondPos);
                 }
 
             } else {
@@ -178,15 +161,15 @@
             }
         }
         CGPoint newPoint = CGPointMake(xValue, yValue);
-        [self.points addObject:[NSValue valueWithCGPoint:newPoint]];
+        [drawPoints addObject:[NSValue valueWithCGPoint:newPoint]];
     }
-    if (!self.disableMainLine && self.points.count > 0 ) {
-        line = [BEMLine pathWithPoints2:self.points curved:self.bezierCurveIsEnabled open:YES];
+    UIBezierPath *line = [UIBezierPath bezierPath];
+    if (!self.disableMainLine && drawPoints.count > 0 ) {
+        line = [BEMLine pathWithPoints:drawPoints curved:self.bezierCurveIsEnabled open:YES];
     }
-    //Temporarily leave background on quadratic to compare results
-    //to Remove, delete PathWithPoints and rename PathWithPoints to PathWithPoints
-    fillBottom = [BEMLine pathWithPoints:self.bottomPointsArray curved:self.bezierCurveIsEnabled open:NO];
-    fillTop    = [BEMLine pathWithPoints:self.topPointsArray    curved:self.bezierCurveIsEnabled open:NO];
+
+    UIBezierPath *fillBottom = [BEMLine pathWithPoints: [self bottomPointsFromArray:drawPoints] curved:self.bezierCurveIsEnabled open:NO];
+    UIBezierPath *fillTop    = [BEMLine pathWithPoints: [self topPointsFromArray: drawPoints]   curved:self.bezierCurveIsEnabled open:NO];
 
     //----------------------------//
     //----- Draw Fill Colors -----//
@@ -310,18 +293,18 @@
     }
 }
 
-- (NSArray <NSValue *> *) areaArrayWithEdgeAt:(CGFloat) edgeHeight  {
+- (NSArray <NSValue *> *) areaArrayFromArray: (NSArray <NSValue *> *) array withEdgeAt:(CGFloat) edgeHeight  {
     CGFloat halfHeight = self.frame.size.height/2;
     CGPoint midLeftPoint = CGPointMake(0, halfHeight);
     CGPoint midRightPoint = CGPointMake(self.frame.size.width,halfHeight);
-    if (self.points.count > 0) {
-        midLeftPoint.y = self.points[0].CGPointValue.y;
-        midRightPoint.y = [self.points lastObject].CGPointValue.y;
+    if (array.count > 0) {
+        midLeftPoint.y = array[0].CGPointValue.y;
+        midRightPoint.y = [array lastObject].CGPointValue.y;
     }
 
     CGPoint topPointZero = CGPointMake(0,edgeHeight);
     CGPoint topPointFull = CGPointMake(self.frame.size.width, edgeHeight);
-    NSMutableArray <NSValue *> *areaPoints = [NSMutableArray arrayWithArray:self.points];
+    NSMutableArray <NSValue *> *areaPoints = [NSMutableArray arrayWithArray:array];
     [areaPoints insertObject:[NSValue valueWithCGPoint:topPointZero] atIndex:0];
     [areaPoints insertObject:[NSValue valueWithCGPoint:midLeftPoint] atIndex:1];
     [areaPoints addObject:[NSValue valueWithCGPoint:midRightPoint]];
@@ -329,36 +312,12 @@
     return areaPoints;
 }
 
-- (NSArray <NSValue *> *)topPointsArray {
-    return [self areaArrayWithEdgeAt:0];
+- (NSArray <NSValue *> *)topPointsFromArray: (NSArray <NSValue *> *) array {
+    return [self areaArrayFromArray: array withEdgeAt:0];
 }
 
-- (NSArray <NSValue *> *)bottomPointsArray {
-    return [self areaArrayWithEdgeAt:self.frame.size.height];
-}
-
-+ (UIBezierPath *)pathWithPoints:(NSArray <NSValue *> *)points curved:(BOOL) curved open:(BOOL) canSkipPoints {
-    UIBezierPath *path = [UIBezierPath bezierPath];
-    NSValue *value = points[0];
-    CGPoint p1 = [value CGPointValue];
-    [path moveToPoint:p1];
-
-    for (NSValue * point in points) {
-        if (point == value) continue; //already at first point
-        CGPoint p2 = [point CGPointValue];
-
-        if (canSkipPoints && (p1.y >= BEMNullGraphValue || p2.y >= BEMNullGraphValue)) {
-            [path moveToPoint:p2];
-        } else if (curved) {
-            CGPoint midPoint = midPointForPoints(p1, p2);
-            [path addQuadCurveToPoint:midPoint controlPoint:controlPointForPoints(midPoint, p1)];
-            [path addQuadCurveToPoint:p2 controlPoint:controlPointForPoints(midPoint, p2)];
-        } else {
-            [path addLineToPoint:p2];
-        }
-        p1 = p2;
-    }
-    return path;
+- (NSArray <NSValue *> *)bottomPointsFromArray: (NSArray <NSValue *> *) array  {
+    return [self areaArrayFromArray: array withEdgeAt:self.frame.size.height];
 }
 
 static CGPoint midPointForPoints(CGPoint p1, CGPoint p2) {
@@ -367,22 +326,8 @@ static CGPoint midPointForPoints(CGPoint p1, CGPoint p2) {
     return CGPointMake((p1.x + p2.x) / 2, avgY);
 }
 
-static CGPoint controlPointForPoints(CGPoint p1, CGPoint p2) {
-    CGPoint controlPoint = midPointForPoints(p1, p2);
-    CGFloat diffY = (CGFloat)fabs(p2.y - controlPoint.y);
-
-    if (p1.y < p2.y)
-        controlPoint.y += diffY;
-    else if (p1.y > p2.y)
-        controlPoint.y -= diffY;
-
-    return controlPoint;
-}
-//Second algorithm
-
-
-+ (UIBezierPath *)pathWithPoints2:(NSArray <NSValue *> *)points curved:(BOOL) curved open:(BOOL) open {
-    //based on Roman Filippov code: http://stackoverflow.com/a/40203583/580850
++ (UIBezierPath *)pathWithPoints:(NSArray <NSValue *> *)points curved:(BOOL) curved open:(BOOL) open {
+    //Cubic fit based on Roman Filippov code: http://stackoverflow.com/a/40203583/580850
     //open means allow gaps in path.
     //Also, if not open, then first/last points are for frame, and should not affect curve.
     UIBezierPath *path = [UIBezierPath bezierPath];

@@ -42,11 +42,8 @@ typedef NS_ENUM(NSUInteger, BEMLineGradientDirection) {
 
 //----- POINTS -----//
 
-/// All of the Y-axis values for the points
-@property (strong, nonatomic, nonnull) NSArray <NSNumber *> *arrayOfPoints;
-
-/// All of the X-axis values for the points
-@property (strong, nonatomic, nonnull) NSArray <NSNumber *> *arrayOfXValues;
+/// All of the values for the points
+@property (strong, nonatomic, nonnull) NSArray <NSValue *> *points;
 
 /// All of the X-Axis coordinates used to draw vertical lines through
 @property (strong, nonatomic, nonnull) NSArray <NSNumber *> *arrayOfVerticalReferenceLinePoints;
