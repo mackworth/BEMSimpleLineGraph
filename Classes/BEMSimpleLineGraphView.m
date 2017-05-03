@@ -539,8 +539,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     CGRect frameForBackgroundXAxis = CGRectZero;
     if (self.enableXAxisLabel) {
         CGFloat xAxisHeight  =  self.labelFont.pointSize + 8.0f;
-        //Future: CGRectEdge edge = self.positionXAxisTop ? CGRectMinYEdge : CGRectMaxYEdge;
-        CGRectDivide(frameForRest, &frameForBackgroundXAxis, &frameForRest, xAxisHeight, CGRectMaxYEdge);
+        CGRectEdge edge = self.positionXAxisTop ? CGRectMinYEdge : CGRectMaxYEdge;
+        CGRectDivide(frameForRest, &frameForBackgroundXAxis, &frameForRest, xAxisHeight, edge);
     }
 
     self.backgroundYAxis.frame = frameForBackgroundYAxis;

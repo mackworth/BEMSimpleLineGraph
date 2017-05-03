@@ -113,6 +113,7 @@ static NSString * checkOn = @"☒";
 
 @property (strong, nonatomic) IBOutlet UISwitch *yAxisSwitch;
 @property (strong, nonatomic) IBOutlet UISwitch *yAxisRightSwitch;
+@property (strong, nonatomic) IBOutlet UISwitch *xAxisTopSwitch;
 @property (strong, nonatomic) IBOutlet UITextField *minValueField;
 @property (strong, nonatomic) IBOutlet UITextField *maxValueField;
 @property (strong, nonatomic) IBOutlet UITextField *numberofYAxisField;
@@ -242,6 +243,9 @@ self.myGraph.property = [defaults   type ##ForKey:@#property]; \
     //#pragma clang diagnostic push
     //#pragma clang diagnostic ignored "-Wnullable-to-nonnull-conversion"
 
+    RestoreProperty (animationGraphEntranceTime, float);
+    RestoreProperty (animationGraphStyle, integer);
+
     RestoreProperty (colorXaxisLabel, color);
     RestoreProperty (colorYaxisLabel, color);
     RestoreProperty (colorTop, color);
@@ -264,6 +268,8 @@ self.myGraph.property = [defaults   type ##ForKey:@#property]; \
     RestoreProperty (widthReferenceLines, float);
     RestoreProperty (sizePoint, float);
     RestoreProperty (widthTouchInputLine, float);
+    RestoreProperty (zoomScale, float);
+    RestoreProperty (minXDisplayedValue, float);
 
     RestoreProperty (enableUserScaling, bool);
     RestoreProperty (enableTouchReport, bool);
@@ -272,10 +278,15 @@ self.myGraph.property = [defaults   type ##ForKey:@#property]; \
     RestoreProperty (enableXAxisLabel, bool);
     RestoreProperty (enableYAxisLabel, bool);
     RestoreProperty (autoScaleYAxis, bool);
+    RestoreProperty (positionYAxisRight, bool);
+    RestoreProperty (positionXAxisTop, bool);
     RestoreProperty (alwaysDisplayDots, bool);
     RestoreProperty (alwaysDisplayPopUpLabels, bool);
+    RestoreProperty (enableReferenceAxisFrame, bool);
     RestoreProperty (enableLeftReferenceAxisFrameLine, bool);
     RestoreProperty (enableBottomReferenceAxisFrameLine, bool);
+    RestoreProperty (enableTopReferenceAxisFrameLine, bool);
+    RestoreProperty (enableRightReferenceAxisFrameLine, bool);
     RestoreProperty (interpolateNullValues, bool);
     RestoreProperty (displayDotsOnly, bool);
     RestoreProperty (displayDotsWhileAnimating, bool);
@@ -307,10 +318,6 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     RestoreDetail (maxXValue, float );
     RestoreDetail (minXValue, float );
     RestoreDetail (variableXAxis, bool );
-    [defaults setObject:nil forKey:@"numberofXAxisLabels"];
-    [defaults setObject:nil forKey:@"numberOfGapsBetweenLabels"];
-    [defaults setObject:nil forKey:@"baseIndexForXAxis"];
-    [defaults setObject:nil forKey:@"incrementIndexForXAxis"];
     RestoreDetail (numberofXAxisLabels, integer );
     RestoreDetail (noDataLabel, bool );
     RestoreDetail (noDataText, object);
@@ -358,6 +365,8 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     EncodeProperty (widthReferenceLines, Float);
     EncodeProperty (sizePoint, Float);
     EncodeProperty (widthTouchInputLine, Float);
+    EncodeProperty (zoomScale, Float);
+    EncodeProperty (minXDisplayedValue, Float);
 
     EncodeProperty (enableUserScaling, Bool);
     EncodeProperty (enableTouchReport, Bool);
@@ -365,9 +374,12 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     EncodeProperty (enableBezierCurve, Bool);
     EncodeProperty (enableXAxisLabel, Bool);
     EncodeProperty (enableYAxisLabel, Bool);
+    EncodeProperty (positionYAxisRight, Bool);
+    EncodeProperty (positionXAxisTop, Bool);
     EncodeProperty (autoScaleYAxis, Bool);
     EncodeProperty (alwaysDisplayDots, Bool);
     EncodeProperty (alwaysDisplayPopUpLabels, Bool);
+    EncodeProperty (enableReferenceAxisFrame, Bool);
     EncodeProperty (enableLeftReferenceAxisFrameLine, Bool);
     EncodeProperty (enableBottomReferenceAxisFrameLine, Bool);
     EncodeProperty (enableTopReferenceAxisFrameLine, Bool);
@@ -430,6 +442,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
     self.yAxisSwitch.on = self.myGraph.enableYAxisLabel;
     self.yAxisRightSwitch.on = self.myGraph.positionYAxisRight;
+    self.xAxisTopSwitch.on = self.myGraph.positionXAxisTop;
     self.minValueField.floatValue = self.detailViewController.minValue;
     self.maxValueField.floatValue = self.detailViewController.maxValue;
     self.numberofYAxisField.intValue = self.detailViewController.numberOfYAxisLabels;
@@ -638,6 +651,11 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 - (IBAction)positionYAxisRight:(UISwitch *)sender {
     self.myGraph.positionYAxisRight = sender.on;
+    [self.myGraph reloadGraph];
+}
+
+- (IBAction)positionXAxisTop:(UISwitch *)sender {
+    self.myGraph.positionXAxisTop = sender.on;
     [self.myGraph reloadGraph];
 }
 

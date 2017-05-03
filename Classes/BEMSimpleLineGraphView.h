@@ -343,8 +343,11 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 @property (strong, nonatomic) UIColor *colorBackgroundPopUplabel;
 
 
-/// Position of the y-Axis in relation to the chart (Default: NO)
+/// Position of the y-Axis in relation to the chart (Default: NO => Left)
 @property (nonatomic) IBInspectable BOOL positionYAxisRight;
+
+/// Position of the x-Axis in relation to the chart (Default: NO ==> Top)
+@property (nonatomic) IBInspectable BOOL positionXAxisTop;
 
 
 /// A line dash patter to be applied to X axis reference lines.  This allows you to draw a dotted or hashed line
