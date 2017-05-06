@@ -113,12 +113,24 @@
     //----------------------------//
     // LINE
     NSUInteger numPoints = self.points.count;
+    CGFloat rightEdge = CGRectGetMaxX(self.bounds);
+    NSInteger numOverRightEdge = 0;
     NSMutableArray <NSValue *> *drawPoints = [NSMutableArray arrayWithCapacity:numPoints];
-    for (NSValue *value in self.points) {
+    for (NSUInteger index = 0; index < self.points.count; index++) {
+        NSValue *value = self.points[index];
         CGPoint point = value.CGPointValue;
         CGFloat xValue = point.x;
         CGFloat yValue = point.y;
-        if (xValue < 0 || xValue > CGRectGetMaxX(self.bounds)) continue;
+        if (xValue < 0) {
+            //only include two points to left of view to get curve correct
+            if (index+2 > self.points.count) continue;
+            if (self.points[index+2].CGPointValue.x < 0) continue;
+        }
+        if (xValue > rightEdge) {
+            //only include twp points to right of view to get curve correct
+            if (numOverRightEdge >= 2) continue;
+            numOverRightEdge++;
+        }
 
         if (yValue >= BEMNullGraphValue  && self.interpolateNullValues) {
             //need to interpolate. For midpoints, just don't add a point
@@ -354,13 +366,19 @@ static CGPoint midPointForPoints(CGPoint p1, CGPoint p2) {
             oldControlPoint = p2;
         } else if (curved ) {
             CGPoint p3 = CGPointZero;
-                //Don't let frame points beyond actual data affect curve.
+            //Don't let frame points beyond actual data affect curve.
             if (pointIndex < dataEnd) p3 = [points[pointIndex+1] CGPointValue] ;
             if (p3.y >= BEMNullGraphValue) p3 = CGPointZero;
-            CGPoint newControlPoint = controlPointForPoints2(p1, p2, p3);
+            CGPoint newControlPoint = controlPointForPoints(p1, p2, p3);
             if (!CGPointEqualToPoint( newControlPoint, CGPointZero)) {
                 [path addCurveToPoint: p2 controlPoint1:oldControlPoint controlPoint2: newControlPoint];
                 oldControlPoint = imaginForPoints( newControlPoint,  p2);
+                //this "if" not in original algorithm, but seems to smooth so that curves don't "backup" when points are too close in x dimension
+                if (! CGPointEqualToPoint(p3,CGPointZero)) {
+                    if (oldControlPoint.x > p3.x ) {
+                        oldControlPoint.x = p3.x;
+                    }
+                }
             } else {
                 [path addCurveToPoint: p2 controlPoint1:oldControlPoint controlPoint2: p2];
                 oldControlPoint = p2;
@@ -396,7 +414,7 @@ static CGFloat clamp(CGFloat num, CGFloat bounds1, CGFloat bounds2) {
     }
 }
 
-static CGPoint controlPointForPoints2(CGPoint p1, CGPoint p2, CGPoint p3) {
+static CGPoint controlPointForPoints(CGPoint p1, CGPoint p2, CGPoint p3) {
     if (CGPointEqualToPoint(p3, CGPointZero)) return CGPointZero;
     CGPoint leftMidPoint = midPointForPoints(p1, p2);
     CGPoint rightMidPoint = midPointForPoints(p2, p3);
@@ -408,7 +426,9 @@ static CGPoint controlPointForPoints2(CGPoint p1, CGPoint p2, CGPoint p3) {
     CGFloat flippedP3 = p2.y + (p2.y-p3.y);
 
     controlPoint.y = clamp(controlPoint.y, p2.y, flippedP3);
-
+    //x clamp not in original algorithm, but seems to smooth
+    //so that curves don't "backup" when points are too close in x dimension
+    controlPoint.x = clamp(controlPoint.x, p1.x, p2.x);
     return controlPoint;
 }
 

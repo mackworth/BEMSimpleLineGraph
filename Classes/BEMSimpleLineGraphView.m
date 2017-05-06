@@ -1365,13 +1365,21 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 #pragma clang diagnostic ignored "-Wfloat-equal"
 -(void) setZoomScale:(CGFloat)zoomScale {
     if (zoomScale !=_zoomScale ) {
-        [self handleZoom:zoomScale orMovement:self.panMovement checkDelegate:NO];
+        if (self.labelsView) {
+            [self handleZoom:zoomScale orMovement:self.panMovement checkDelegate:NO];
+        } else {
+            _zoomScale = zoomScale;
+        }
     }
 }
 
 -(void) setPanMovement:(CGFloat)panMovement {
     if (panMovement != _panMovement ) {
-        [self handleZoom:self.zoomScale orMovement:panMovement checkDelegate:NO];
+        if (self.labelsView) {
+            [self handleZoom:self.zoomScale orMovement:panMovement checkDelegate:NO];
+        } else {
+            _panMovement = panMovement;
+        }
     }
 }
 #pragma clang diagnostic pop
@@ -1409,8 +1417,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     //2) calculate lowest value that will now be displayed (newMinXDisplayed)
     //3) that lets us check if min or max X values  will be located in middle of screen,  adjust if necessary.
     //4) finally ask permission for new panZoom and update geometry globals
-    CGFloat xAxisWidth = CGRectGetMaxX(self.labelsView.bounds);
+    CGFloat xAxisWidth =  CGRectGetMaxX(self.labelsView.bounds);
     CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
+    if (xAxisWidth <= 0 || totalValueRangeWidth <= 0) return NO; 
 
     CGFloat newValueRangeWidth = (totalValueRangeWidth) / newScale;
     CGFloat displayRatio = xAxisWidth/newValueRangeWidth;
@@ -1624,7 +1633,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (self.maxYValue < self.minYValue) self.maxYValue = self.minYValue+1;
     if (self.maxXValue < self.minXValue) self.maxXValue = self.minXValue+1;
 
-    if (self.zoomScale <= 1.0) {
+    if (self.zoomScale <= 1.0 || isnan(self.minXDisplayedValue )) {
         _zoomScale = 1.0;
         _minXDisplayedValue = self.minXValue;
         _maxXDisplayedValue = self.maxXValue;
