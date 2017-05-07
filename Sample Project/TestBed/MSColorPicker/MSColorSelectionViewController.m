@@ -58,7 +58,7 @@
 
 - (IBAction)segmentControlDidChangeValue:(UISegmentedControl *)segmentedControl
 {
-    [self.colorSelectionView setSelectedIndex:segmentedControl.selectedSegmentIndex animated:YES];
+    [self.colorSelectionView setSelectedIndex:(NSUInteger)segmentedControl.selectedSegmentIndex animated:YES];
 }
 
 - (void)setColor:(UIColor *)color

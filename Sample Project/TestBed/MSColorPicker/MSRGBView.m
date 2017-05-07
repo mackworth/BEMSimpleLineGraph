@@ -34,7 +34,7 @@ extern CGFloat const MSRGBColorComponentMaxValue;
 static CGFloat const MSColorSampleViewHeight = 30.0f;
 static CGFloat const MSViewMargin = 20.0f;
 static CGFloat const MSSliderViewMargin = 30.0f;
-static NSUInteger const MSRGBColorComponentsSize = 3;
+static NSInteger const MSRGBColorComponentsSize = 3;
 
 @interface MSRGBView ()
 {
@@ -109,7 +109,7 @@ static NSUInteger const MSRGBColorComponentsSize = 3;
     NSArray *maxValues = @[@(MSRGBColorComponentMaxValue), @(MSRGBColorComponentMaxValue), @(MSRGBColorComponentMaxValue)];
 
     for (NSUInteger i = 0; i < MSRGBColorComponentsSize; ++i) {
-        UIControl *colorComponentView = [self ms_colorComponentViewWithTitle:titles[i] tag:i maxValue:[maxValues[i] floatValue]];
+        UIControl *colorComponentView = [self ms_colorComponentViewWithTitle:titles[i] tag:(NSInteger)i maxValue:[maxValues[i] floatValue]];
         [self addSubview:colorComponentView];
         [colorComponentView addTarget:self action:@selector(ms_colorComponentDidChangeValue:) forControlEvents:UIControlEventValueChanged];
         [tmp addObject:colorComponentView];
@@ -126,7 +126,7 @@ static NSUInteger const MSRGBColorComponentsSize = 3;
     [self reloadData];
 }
 
-- (void)ms_setColorComponentValue:(CGFloat)value atIndex:(NSUInteger)index
+- (void)ms_setColorComponentValue:(CGFloat)value atIndex:(NSInteger)index
 {
     switch (index) {
         case 0:
@@ -147,7 +147,7 @@ static NSUInteger const MSRGBColorComponentsSize = 3;
     }
 }
 
-- (UIControl *)ms_colorComponentViewWithTitle:(NSString *)title tag:(NSUInteger)tag maxValue:(CGFloat)maxValue
+- (UIControl *)ms_colorComponentViewWithTitle:(NSString *)title tag:(NSInteger)tag maxValue:(CGFloat)maxValue
 {
     MSColorComponentView *colorComponentView = [[MSColorComponentView alloc] init];
 
@@ -197,7 +197,7 @@ static NSUInteger const MSRGBColorComponentsSize = 3;
 
     [_colorComponentViews enumerateObjectsUsingBlock:^(MSColorComponentView *colorComponentView, NSUInteger idx, BOOL *stop) {
          [colorComponentView setColors:[self ms_colorsWithColorComponents:components
-                                                        currentColorIndex:colorComponentView.tag]];
+                                                        currentColorIndex:(NSUInteger)colorComponentView.tag]];
          colorComponentView.value = [components[idx] floatValue] * colorComponentView.maximumValue;
      }];
 }

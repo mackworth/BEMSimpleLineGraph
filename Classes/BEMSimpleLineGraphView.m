@@ -28,7 +28,7 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 #pragma mark Properties to store data and computed locations
 /// The number of Points in the Graph
 /// Set by layoutself.numberOfPoints
-@property (assign, nonatomic ) NSUInteger numberOfPoints;
+@property (assign, nonatomic ) NSInteger numberOfPoints;
 
 /// All of the Data Points from datasource (Y values)
 /// Set by getData and used throughout.
@@ -893,7 +893,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                 if (indexLabels) {
                     xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForIndex:realIndex ];
                 } else {
-                    xAxisLabelText = [NSString stringWithFormat:@"%lu", realIndex];
+                    xAxisLabelText = [NSString stringWithFormat:@"%lu", (long)realIndex];
                 }
             }
             [newAxisLabelTexts addObject:xAxisLabelText];
@@ -1346,7 +1346,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     CGFloat xLoc = [gestureRecognizer locationInView:self.labelsView].x;
     if ([gestureRecognizer isEqual:self.touchReportPanGesture]) {
-        if (gestureRecognizer.numberOfTouches >= self.touchReportFingersRequired) {
+        if ((NSInteger)gestureRecognizer.numberOfTouches >= self.touchReportFingersRequired) {
             CGPoint translation = [self.touchReportPanGesture velocityInView:self.labelsView];
             return fabs(translation.y) < fabs(translation.x);
         } else {

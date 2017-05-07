@@ -101,7 +101,7 @@
     BOOL showNullValue = YES;
     
     // Add objects to the array based on the stepper value
-    for (int i = 0; i < 9; i++) {
+    for (NSUInteger i = 0; i < 9; i++) {
         [self.arrayOfValues addObject:@([self getRandomFloat])]; // Random values for the graph
         if (i == 0) {
             [self.arrayOfDates addObject:baseDate]; // Dates for the X-Axis of the graph
@@ -123,7 +123,7 @@
 }
 
 - (NSString *)labelForDateAtIndex:(NSInteger)index {
-    NSDate *date = self.arrayOfDates[index];
+    NSDate *date = self.arrayOfDates[(NSUInteger)index];
     NSDateFormatter *df = [[NSDateFormatter alloc] init];
     df.dateFormat = @"MM/dd";
     NSString *label = [df stringFromDate:date];
@@ -203,28 +203,28 @@
 
 #pragma mark - SimpleLineGraph Data Source
 
-- (NSUInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView *)graph {
+- (NSInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView *)graph {
     return (int)[self.arrayOfValues count];
 }
 
-- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph valueForPointAtIndex:(NSUInteger)index {
-    return [[self.arrayOfValues objectAtIndex:index] doubleValue];
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph valueForPointAtIndex:(NSInteger)index {
+    return self.arrayOfValues [(NSUInteger)index].doubleValue;
 }
 
 #pragma mark - SimpleLineGraph Delegate
 
-- (NSUInteger)numberOfGapsBetweenLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph {
+- (NSInteger)numberOfGapsBetweenLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph {
     return 2;
 }
 
-- (NSString *)lineGraph:(BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index {
+- (NSString *)lineGraph:(BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSInteger)index {
 
     NSString *label = [self labelForDateAtIndex:index];
     return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
 }
 
-- (void)lineGraph:(BEMSimpleLineGraphView *)graph didTouchGraphWithClosestIndex:(NSUInteger)index {
-    self.labelValues.text = [NSString stringWithFormat:@"%@", [self.arrayOfValues objectAtIndex:index]];
+- (void)lineGraph:(BEMSimpleLineGraphView *)graph didTouchGraphWithClosestIndex:(NSInteger)index {
+    self.labelValues.text = [NSString stringWithFormat:@"%@", self.arrayOfValues [(NSUInteger)index]];
     self.labelDates.text = [NSString stringWithFormat:@"in %@", [self labelForDateAtIndex:index]];
 }
 
@@ -234,7 +234,7 @@
         self.labelDates.alpha = 0.0f;
     } completion:^(BOOL finished) {
         self.labelValues.text = [NSString stringWithFormat:@"%i", [[[BEMGraphCalculator sharedCalculator] calculatePointValueSumOnGraph:self.myGraph] intValue]];
-        self.labelDates.text = [NSString stringWithFormat:@"between %@ and %@", [self labelForDateAtIndex:0], [self labelForDateAtIndex:self.arrayOfDates.count - 1]];
+        self.labelDates.text = [NSString stringWithFormat:@"between %@ and %@", [self labelForDateAtIndex:0], [self labelForDateAtIndex:(NSInteger)(self.arrayOfDates.count) - 1]];
         
         [UIView animateWithDuration:0.5 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
             self.labelValues.alpha = 1.0f;
@@ -247,7 +247,7 @@
     if (self.arrayOfValues.count > 0) {
         NSNumber *pointSum = [[BEMGraphCalculator sharedCalculator] calculatePointValueSumOnGraph:self.myGraph];
         self.labelValues.text = [NSString stringWithFormat:@"%i", [pointSum intValue]];
-        self.labelDates.text = [NSString stringWithFormat:@"between %@ and %@", [self labelForDateAtIndex:0], [self labelForDateAtIndex:self.arrayOfDates.count - 1]];
+        self.labelDates.text = [NSString stringWithFormat:@"between %@ and %@", [self labelForDateAtIndex:0], [self labelForDateAtIndex:(NSInteger)(self.arrayOfDates.count) - 1]];
     } else {
         self.labelValues.text = @"No data";
         self.labelDates.text = @"";

@@ -111,8 +111,8 @@ float randomProbability () {
     self.newestDate = [NSDate distantPast];
     self.biggestValue = -INFINITY;
     self.smallestValue = INFINITY;
-    for (int i = 0; i < self.numberOfPoints; i++) {
-        CGFloat value = self.arrayOfValues[i].floatValue;
+    for (NSInteger i = 0; i < self.numberOfPoints; i++) {
+        CGFloat value = self.arrayOfValues[(NSUInteger)i].floatValue;
         if (value < BEMNullGraphValue) {
             self.totalNumber = self.totalNumber + value;
             self.biggestValue = MAX(self.biggestValue,value );
@@ -131,7 +131,7 @@ float randomProbability () {
 }
 
 - (NSString *)labelForDateAtIndex:(NSInteger)index {
-    NSDate *date = self.arrayOfDates[index];
+    NSDate *date = self.arrayOfDates[(NSUInteger)index];
     NSString *label = [self.dateFormatter stringFromDate:date];
     return label;
 }
@@ -216,21 +216,21 @@ float randomProbability () {
 
 #pragma mark - SimpleLineGraph Data Source
 
-- (NSUInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView *)graph {
-    return [self.arrayOfValues count];
+- (NSInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView *)graph {
+    return (NSInteger)[self.arrayOfValues count];
 }
 
-- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph valueForPointAtIndex:(NSUInteger)index {
-    return [[self.arrayOfValues objectAtIndex:index] doubleValue];
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph valueForPointAtIndex:(NSInteger)index {
+    return self.arrayOfValues [(NSUInteger)index].doubleValue;
 }
 
 -(NSInteger) numberOfXAxisLabelsOnLineGraph: graph {
     return self.numberofXAxisLabels;
 }
 
-- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSUInteger)index {
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSInteger)index {
 
-    return [[self.arrayOfDates objectAtIndex:index] timeIntervalSinceReferenceDate];
+    return [self.arrayOfDates [(NSUInteger)index] timeIntervalSinceReferenceDate];
 }
 
 #pragma mark - SimpleLineGraph Delegate
@@ -288,11 +288,11 @@ float randomProbability () {
 }
 
 
-- (NSString *)lineGraph:(BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index {
-    return [NSString stringWithFormat:@"%lu", index];
-//    NSDate *date = self.arrayOfDates[index];
-//    NSString *label = [self.dateFormatter stringFromDate:date];
-//    return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
+- (NSString *)lineGraph:(BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSInteger)index {
+//    return [NSString stringWithFormat:@"%lu", (long)index];
+    NSDate *date = self.arrayOfDates[(NSUInteger)index];
+    NSString *label = [self.dateFormatter stringFromDate:date];
+    return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
 }
 
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location {
@@ -310,7 +310,7 @@ float randomProbability () {
     return self.popUpPrefix;
 }
 
--(NSString *) popUpTextForlineGraph:(BEMSimpleLineGraphView *)graph atIndex:(NSUInteger)index {
+-(NSString *) popUpTextForlineGraph:(BEMSimpleLineGraphView *)graph atIndex:(NSInteger)index {
     if (!self.popUpText) return @"Empty format string";
     @try {
 #pragma clang diagnostic push
@@ -323,7 +323,7 @@ float randomProbability () {
 
 }
 
-- (BOOL)lineGraph:(BEMSimpleLineGraphView *)graph alwaysDisplayPopUpAtIndex:(NSUInteger)index {
+- (BOOL)lineGraph:(BEMSimpleLineGraphView *)graph alwaysDisplayPopUpAtIndex:(NSInteger)index {
     return (index % 3 != 0);
 }
 
@@ -350,7 +350,7 @@ float randomProbability () {
     return self.customView;
 }
 
-- (void)lineGraph:(BEMSimpleLineGraphView *)graph modifyPopupView:(UIView *)popupView forIndex:(NSUInteger)index {
+- (void)lineGraph:(BEMSimpleLineGraphView *)graph modifyPopupView:(UIView *)popupView forIndex:(NSInteger)index {
     NSAssert (popupView == self.customView, @"View problem");
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
@@ -363,15 +363,15 @@ float randomProbability () {
 
 //----- X AXIS -----//
 
-- (NSUInteger)numberOfGapsBetweenLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph {
+- (NSInteger)numberOfGapsBetweenLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph {
     return self.numberOfGapsBetweenLabels;
 }
 
-- (NSUInteger)baseIndexForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph {
+- (NSInteger)baseIndexForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph {
     return self.baseIndexForXAxis;
 }
 
-- (NSUInteger)incrementIndexForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph {
+- (NSInteger)incrementIndexForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph {
     return self.incrementIndexForXAxis;
 }
 
@@ -394,7 +394,7 @@ float randomProbability () {
 
 //----- Y AXIS -----//
 
-- (NSUInteger)numberOfYAxisLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph {
+- (NSInteger)numberOfYAxisLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph {
     return self.numberOfYAxisLabels;
 }
 
@@ -416,8 +416,8 @@ float randomProbability () {
 
 #pragma mark Touch handling
 
-- (void)lineGraph:(BEMSimpleLineGraphView *)graph didTouchGraphWithClosestIndex:(NSUInteger)index {
-    NSNumber * value = self.arrayOfValues[index];
+- (void)lineGraph:(BEMSimpleLineGraphView *)graph didTouchGraphWithClosestIndex:(NSInteger)index {
+    NSNumber * value = self.arrayOfValues[(NSUInteger)index];
     if (value.floatValue < BEMNullGraphValue) {
         self.labelValues.text = [self formatNumber:value];
         self.labelDates.text = [NSString stringWithFormat:@"on %@", [self labelForDateAtIndex:index]];
@@ -469,7 +469,7 @@ float randomProbability () {
     if (self.arrayOfValues.count > 0) {
         NSNumber * sum = [[BEMGraphCalculator sharedCalculator] calculatePointValueSumOnGraph:graph];
         self.labelValues.text =[self formatNumber:sum];
-        self.labelDates.text = [NSString stringWithFormat:@"between %@ and %@", [self labelForDateAtIndex:0], [self labelForDateAtIndex:self.arrayOfDates.count - 1]];
+        self.labelDates.text = [NSString stringWithFormat:@"between %@ and %@", [self labelForDateAtIndex:0], [self labelForDateAtIndex:(NSInteger)(self.arrayOfDates.count) - 1]];
     } else {
         self.labelValues.text = @"No data";
         self.labelDates.text = @"";

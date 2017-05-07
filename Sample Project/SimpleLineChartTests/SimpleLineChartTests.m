@@ -41,15 +41,15 @@
 
 #pragma mark BEMSimpleLineGraph Data Source
 
-- (NSUInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView * __nonnull)graph {
-    return numberOfPoints;
+- (NSInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView * __nonnull)graph {
+    return (NSInteger)numberOfPoints;
 }
 
-- (CGFloat)lineGraph:(BEMSimpleLineGraphView * __nonnull)graph valueForPointAtIndex:(NSUInteger)index {
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView * __nonnull)graph valueForPointAtIndex:(NSInteger)index {
     return pointValue;
 }
 
-- (NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index {
+- (NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSInteger)index {
     return xAxisLabelString;
 }
 
@@ -105,7 +105,9 @@
     for (BEMCircle *dot in dots) {
         XCTAssert(dot.bounds.size.width == 10.0, @"Dots are expected to have a default width of 10.0");
         XCTAssert(dot.bounds.size.height == 10.0, @"Dots are expected to have a default height of 10.0");
-        XCTAssert([dot.color isEqual:[UIColor colorWithWhite:1.0 alpha:0.7]], @"Dots are expected to be white at alpha 0.7 by default");
+        //following ugliness necessary for Extended Grey space on newer devices
+        CGFloat alpha, white;
+        XCTAssert([dot.color getWhite: &white alpha:&alpha] && fabs(white - 1.0) < .00001 && fabs(alpha - 0.7) < .00001, @"Dots are expected to be white at alpha 0.7 by default");
         XCTAssert(dot.absoluteValue == pointValue, @"Dots are expected to have a value equal to the value returned by the data source method 'valueForPointAtIndex:'");
         XCTAssert(dot.alpha == 0.0, @"Dots are expected to not be displayed by default (alpha of 0)");
         XCTAssert([dot.backgroundColor isEqual:[UIColor clearColor]], @"Dots are expected to have a clearColor background color by default");

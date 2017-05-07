@@ -39,12 +39,12 @@ static NSString * kARFontPickerViewControllerCellIdentifier = @"ARFontPickerView
 #pragma mark UITableViewController methods
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return [[UIFont familyNames] count];
+    return (NSInteger)[[UIFont familyNames] count];
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
 	NSString *familyName = [self fontFamilyForSection:section];
-	return [[UIFont fontNamesForFamilyName:familyName] count];
+	return (NSInteger)[[UIFont fontNamesForFamilyName:familyName] count];
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {

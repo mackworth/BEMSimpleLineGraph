@@ -237,23 +237,23 @@
     NSMutableArray <NSNumber *> *xPoints = [NSMutableArray arrayWithCapacity:yPoints.count];
     if (scale == nil || scale.floatValue == 0.0) {
         for (NSUInteger i = 1; i <= yPoints.count; i++) {
-            [xPoints addObject:[NSNumber numberWithInteger:i]];
+            [xPoints addObject:@(i)];
         }
     } else {
         for (NSUInteger i = 1; i <= yPoints.count; i++) {
-            [xPoints addObject:[NSNumber numberWithFloat:(i*scale.floatValue)]];
+            [xPoints addObject:@(i*scale.floatValue)];
         }
     }
     
     // Set the initial values of our sum counts
-    NSInteger pointsCount = yPoints.count;
+    NSUInteger pointsCount = yPoints.count;
     CGFloat sumY = 0.0;
     CGFloat sumX = 0.0;
     CGFloat sumXY = 0.0;
     CGFloat sumX2 = 0.0;
     CGFloat sumY2 = 0.0;
     
-    NSInteger iterationCount = 0;
+    NSUInteger iterationCount = 0;
     for (NSNumber *yPoint in yPoints) {
         NSNumber *xPoint = xPoints[iterationCount];
         iterationCount++;

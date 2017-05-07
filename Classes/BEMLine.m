@@ -153,19 +153,19 @@
 
             } else if (value == self.points[numPoints-1]) {
                 //extrapolate a right edge poit from previous two actual values
-                NSInteger firstPos = numPoints-2; //look for first real value
-                while (firstPos >= 0 && self.points[firstPos].CGPointValue.y >= BEMNullGraphValue) firstPos--;
+                NSInteger firstPos = ((NSInteger)numPoints)-2; //look for first real value
+                while (firstPos >= 0 && self.points[(NSUInteger)firstPos].CGPointValue.y >= BEMNullGraphValue) firstPos--;
                 if (firstPos < 0 ) continue;  // all NaNs?? =>don't create any line; should already be gone
 
-                CGFloat firstValue = self.points[firstPos].CGPointValue.y;
+                CGFloat firstValue = self.points[(NSUInteger)firstPos].CGPointValue.y;
                 NSInteger secondPos = firstPos-1; //look for second real value
-                while (secondPos >= 0 && self.points[secondPos].CGPointValue.y >= BEMNullGraphValue) secondPos--;
+                while (secondPos >= 0 && self.points[(NSUInteger)secondPos].CGPointValue.y >= BEMNullGraphValue) secondPos--;
                 if (secondPos < 0) {
                     // only one real number
                     yValue = firstValue;
                 } else {
-                    CGFloat delta = firstValue - self.points[secondPos].CGPointValue.y;
-                    yValue = firstValue + (numPoints - firstPos-1)*delta/(firstPos - secondPos);
+                    CGFloat delta = firstValue - self.points[(NSUInteger)secondPos].CGPointValue.y;
+                    yValue = firstValue + ((NSInteger)numPoints - firstPos-1)*delta/(firstPos - secondPos);
                 }
 
             } else {

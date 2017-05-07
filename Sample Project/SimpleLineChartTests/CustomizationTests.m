@@ -40,15 +40,15 @@
 
 #pragma mark BEMSimpleLineGraph Data Source
 
-- (NSUInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView * __nonnull)graph {
-    return numberOfPoints;
+- (NSInteger)numberOfPointsInLineGraph:(BEMSimpleLineGraphView * __nonnull)graph {
+    return (NSInteger)numberOfPoints;
 }
 
-- (CGFloat)lineGraph:(BEMSimpleLineGraphView * __nonnull)graph valueForPointAtIndex:(NSUInteger)index {
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView * __nonnull)graph valueForPointAtIndex:(NSInteger)index {
     return pointValue;
 }
 
-- (NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSUInteger)index {
+- (NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSInteger)index {
     return xAxisLabelString;
 }
 
