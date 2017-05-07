@@ -904,7 +904,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             if (CGRectContainsRect(self.backgroundXAxis.bounds, labelXAxis.frame)){
                 [self.backgroundXAxis addSubview:labelXAxis];
                 if (self.enableReferenceXAxisLines &&
-                    (self.dataPoints[index].CGPointValue.y < BEMNullGraphValue || self.interpolateNullValues)) {
+                    (allLabelLocations[index].CGPointValue.y < BEMNullGraphValue || self.interpolateNullValues)) {
                     [newReferenceLinePoints addObject:@(positionOnXAxis)];
                 }
             }
@@ -970,7 +970,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (positionOnXAxis + halfWidth >= 0) positionOnXAxis = MAX(positionOnXAxis, halfWidth);
     CGFloat rightEdge = CGRectGetMaxX(self.backgroundXAxis.bounds) ;
     if (positionOnXAxis - halfWidth <= rightEdge) {
-            positionOnXAxis = MIN(positionOnXAxis, rightEdge - halfWidth);
+            positionOnXAxis = MIN(positionOnXAxis, rightEdge - halfWidth-.1);
     }
     labelXAxis.frame = lRect;
     labelXAxis.center = CGPointMake(positionOnXAxis, CGRectGetMidY(self.backgroundXAxis.bounds));
@@ -1020,7 +1020,20 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     labelYAxis.textColor = self.colorYaxisLabel;
     labelYAxis.backgroundColor = [UIColor clearColor];
     CGFloat yAxisPosition = [self yPositionForDotValue:value];
+    if (self.enableXAxisLabel && self.positionXAxisTop) {
+        //because y axis frame is independent of xaxis presence (as opposed to dot view), we have to adjust here
+        yAxisPosition += CGRectGetHeight(self.backgroundXAxis.frame);
+    }
+    CGFloat halfLabel = labelHeight/2;
+    CGFloat topEdge = CGRectGetMaxY(self.backgroundYAxis.bounds);
+    //nudge partially visible top/bottom labels onto screen
+    if (yAxisPosition > -halfLabel && yAxisPosition < halfLabel) {
+        yAxisPosition = halfLabel;
+    } else if (yAxisPosition > topEdge - halfLabel && yAxisPosition < topEdge +halfLabel) {
+        yAxisPosition = topEdge - halfLabel;
+    }
     labelYAxis.center = CGPointMake(xValueForCenterLabelYAxis, yAxisPosition);
+
 
     return labelYAxis;
 }
@@ -1127,7 +1140,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     for (UILabel * label in newLabels) {
         if (label == newLabels[0] || //always show first label
             (CGRectIsNull(CGRectIntersection(prevLabel.frame,              label.frame)) &&
-             CGRectIsNull(CGRectIntersection(averageLabel.frame,           label.frame)) &&
+             (!averageLabel ||
+              CGRectIsNull(CGRectIntersection(averageLabel.frame,          label.frame))) &&
              CGRectContainsRect(self.backgroundYAxis.bounds,               label.frame))) {
             prevLabel = label;  //no overlap and inside frame, so show this one
         } else {
@@ -1646,6 +1660,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     self.maxXValue = self.numberOfPoints-1;
 #endif
 
+    if (self.minXDisplayedValue < self.minXValue || self.minXDisplayedValue > self.maxXValue) {
+        //possibly caller changed all our data out from under us...
+        self.minXDisplayedValue = self.minXValue;
+    }
     //now calculate point locations in view
     CGFloat xAxisWidth = CGRectGetMaxX(self.dotsView.bounds);
     CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;

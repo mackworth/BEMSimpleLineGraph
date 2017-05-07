@@ -305,10 +305,11 @@ self.myGraph.property = [defaults   type ##ForKey:@#property]; \
         [self updateFont:labelFontName atSize:labelFontSize];
     }
 #define RestoreDetail(property, type) \
-if ([defaults objectForKey:@#property] != nil) { \
+if ([defaults type ##ForKey:@#property]) { \
 self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
+    RestoreDetail (percentNulls, float );
     RestoreDetail (popUpText, object);
     RestoreDetail (popUpPrefix, object);
     RestoreDetail (popUpSuffix, object);
@@ -322,7 +323,6 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     RestoreDetail (noDataLabel, bool );
     RestoreDetail (noDataText, object);
     RestoreDetail (staticPaddingValue, float );
-    RestoreDetail (percentNulls, float );
     RestoreDetail (provideCustomView, bool );
     RestoreDetail (numberOfGapsBetweenLabels, integer );
     RestoreDetail (baseIndexForXAxis, integer );
@@ -396,6 +396,8 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [defaults setFloat:self.myGraph.labelFont.pointSize forKey:@"labelFontSize"] ;
 
 #define EncodeDetail(property, type) [defaults set ## type: self.detailViewController.property forKey:@#property]
+    EncodeDetail (percentNulls, Float );
+
     EncodeDetail (popUpText, Object);
     EncodeDetail (popUpPrefix, Object);
     EncodeDetail (popUpSuffix, Object);
@@ -409,7 +411,6 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     EncodeDetail (noDataLabel, Bool );
     EncodeDetail (noDataText, Object);
     EncodeDetail (staticPaddingValue, Float );
-    EncodeDetail (percentNulls, Float );
     EncodeDetail (provideCustomView, Bool );
     EncodeDetail (numberOfGapsBetweenLabels, Integer );
     EncodeDetail (baseIndexForXAxis, Integer );
@@ -430,9 +431,10 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     self.interpolateNullValuesSwitch.on = self.myGraph.interpolateNullValues;
     self.percentNullSlider.value = self.detailViewController.percentNulls;
 
-    self.xAxisSwitch.on = self.myGraph.enableXAxisLabel;;
+    self.xAxisSwitch.on = self.myGraph.enableXAxisLabel;
+    self.xAxisTopSwitch.on = self.myGraph.positionXAxisTop;
     self.numberOfGapsBetweenLabelsField.intValue = self.detailViewController.numberOfGapsBetweenLabels;
-    self.baseIndexForXAxisField.floatValue = self.detailViewController.baseValueForYAxis;
+    self.baseIndexForXAxisField.floatValue = self.detailViewController.baseIndexForXAxis;
     self.incrementIndexForXAxisField.intValue = self.detailViewController.incrementIndexForXAxis;
     self.arrayOfIndicesForXAxis.on = self.detailViewController.provideIncrementPositionsForXAxis;
     self.variableXAxisSwitch.on = self.detailViewController.variableXAxis;
@@ -442,14 +444,13 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
     self.yAxisSwitch.on = self.myGraph.enableYAxisLabel;
     self.yAxisRightSwitch.on = self.myGraph.positionYAxisRight;
-    self.xAxisTopSwitch.on = self.myGraph.positionXAxisTop;
     self.minValueField.floatValue = self.detailViewController.minValue;
     self.maxValueField.floatValue = self.detailViewController.maxValue;
     self.numberofYAxisField.intValue = self.detailViewController.numberOfYAxisLabels;
     self.yAxisPrefixField.text = self.detailViewController.yAxisPrefix;
     self.yAxisSuffixField.text = self.detailViewController.yAxisSuffix;
     self.baseValueForYAxis.floatValue = self.detailViewController.baseValueForYAxis;
-    self.incrementIndexForXAxisField.floatValue = self.detailViewController.incrementValueForYAxis;
+    self.incrementValueForYAxis.floatValue = self.detailViewController.incrementValueForYAxis;
 
     self.enableAverageLineSwitch.on = self.myGraph.averageLine.enableAverageLine;
     self.averageLineTitleField.text = self.myGraph.averageLine.title;
