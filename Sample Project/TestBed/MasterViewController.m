@@ -186,7 +186,7 @@ static NSString * checkOn = @"☒";
 
 @implementation MasterViewController
 
-CGGradientRef createGradient () {
+CGGradientRef static createGradient (void) {
     CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
     size_t num_locations = 2;
     CGFloat locations[2] = { 0.0, 1.0 };

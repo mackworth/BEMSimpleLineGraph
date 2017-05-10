@@ -73,7 +73,7 @@
     if (self.enableReferenceLines == YES) {
         if (self.arrayOfVerticalReferenceLinePoints.count > 0) {
             for (NSNumber *xNumber in self.arrayOfVerticalReferenceLinePoints) {
-                CGFloat xValue =[xNumber doubleValue];
+                CGFloat xValue =[xNumber floatValue];
                 CGPoint initialPoint = CGPointMake(xValue, self.frame.size.height);
                 CGPoint finalPoint = CGPointMake(xValue, 0);
 
@@ -333,7 +333,7 @@
 }
 
 static CGPoint midPointForPoints(CGPoint p1, CGPoint p2) {
-    CGFloat avgY = (p1.y + p2.y) / 2.0;
+    CGFloat avgY = (p1.y + p2.y) / 2.0f;
     if (isinf(avgY)) avgY = BEMNullGraphValue;
     return CGPointMake((p1.x + p2.x) / 2, avgY);
 }
@@ -344,14 +344,16 @@ static CGPoint midPointForPoints(CGPoint p1, CGPoint p2) {
     //Also, if not open, then first/last points are for frame, and should not affect curve.
     UIBezierPath *path = [UIBezierPath bezierPath];
     CGPoint p1 = [points[0] CGPointValue];
-    NSUInteger dataStart = open ? 1 : 2;
-    NSUInteger dataEnd = points.count-(open ? 1 : 2);
+    NSUInteger dataStart = 1;
+    NSUInteger dataEnd = points.count-1;
     [path moveToPoint:p1];
     if (!open) {
-        //skip first point (not data)
-        dataStart = 2;
-        p1 = [points[1] CGPointValue];
+        //skip first/last points (frame, not data) to ensure line/frame use same bezier path
+        [path addLineToPoint:[points[1] CGPointValue]];
+        p1 = [points[2] CGPointValue];
         [path addLineToPoint:p1];
+        dataStart += 2;
+        dataEnd -= 2;
     }
     CGPoint oldControlPoint = p1;
     for (NSUInteger pointIndex = dataStart; pointIndex< points.count; pointIndex++) {

@@ -272,13 +272,13 @@
     // Calculate the correlational value
     CGFloat numeratorFirstChunk = (pointsCount * sumXY); // Calculate the mean of the points
     CGFloat numeratorSecondChunk = (sumX * sumY); // Calculate total graph values
-    CGFloat denomenatorFirstChunk = sqrt(pointsCount * sumX2 - (sumX * sumX)); // Square root of the sum of all X-Values squared
-    CGFloat denomenatorSecondChunk = sqrt(pointsCount * sumY2 - (sumY * sumY)); // Square root of the sum of all Y-Values squared
-    CGFloat correlation = (numeratorFirstChunk - numeratorSecondChunk) / (denomenatorFirstChunk * denomenatorSecondChunk);
+    double denomenatorFirstChunk = sqrt(pointsCount * sumX2 - (sumX * sumX)); // Square root of the sum of all X-Values squared
+    double denomenatorSecondChunk = sqrt(pointsCount * sumY2 - (sumY * sumY)); // Square root of the sum of all Y-Values squared
+    double correlation = (numeratorFirstChunk - numeratorSecondChunk) / (denomenatorFirstChunk * denomenatorSecondChunk);
     
     // NSLog(@"CORRELATION:\nSlope: %f\nIntercept:%f\nCorrelation:%f", slope, intercept, correlation);
     
-    return [NSNumber numberWithFloat:correlation];
+    return @(correlation);
 }
 
 - (BEMPearsonCorrelationStrength)calculatePearsonCorrelationStrengthOnGraph:(BEMSimpleLineGraphView *)graph xAxisScale:(nonnull NSNumber *)scale {

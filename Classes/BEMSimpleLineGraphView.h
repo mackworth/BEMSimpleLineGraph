@@ -430,6 +430,15 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  */
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location;
 
+//------- Y AXIS -------//
+
+/** The string to display on the label on the Y-axis at a given value.
+ @discussion this overrids yAxisPrefixOnLineGraph and yAxisSuffixfixOnLineGraph.
+ @param graph The graph object which is requesting the label on the specified Y-Axis position.
+ @param location The value for a label in the same units/range as valueForPointAtIndex.
+ */
+- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnYAxisForValue:(CGFloat)value;
+
 
 @end
 

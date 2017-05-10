@@ -35,9 +35,9 @@ self.property = [coder decode ## type ##ForKey:@#property ]; \
 
     RestoreProperty (enableAverageLine, Bool);
     RestoreProperty (color, Object);
-    RestoreProperty (yValue, Double);
-    RestoreProperty (alpha, Double);
-    RestoreProperty (width, Double);
+    RestoreProperty (yValue, Float);
+    RestoreProperty (alpha, Float);
+    RestoreProperty (width, Float);
     RestoreProperty (dashPattern, Object);
     RestoreProperty (title, Object);
 #pragma clang diagnostic pop
@@ -51,9 +51,9 @@ self.property = [coder decode ## type ##ForKey:@#property ]; \
 #define EncodeProperty(property, type) [coder encode ## type: self.property forKey:@#property]
     EncodeProperty (enableAverageLine, Bool);
     EncodeProperty (color, Object);
-    EncodeProperty (yValue, Float);
-    EncodeProperty (alpha, Float);
-    EncodeProperty (width, Float);
+    EncodeProperty (yValue, Double);
+    EncodeProperty (alpha, Double);
+    EncodeProperty (width, Double);
     EncodeProperty (dashPattern, Object);
     EncodeProperty (title, Object);
 }
