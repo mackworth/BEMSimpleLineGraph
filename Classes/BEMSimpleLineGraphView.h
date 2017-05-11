@@ -69,6 +69,11 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @return The snapshot of the graph as a UIImage object. */
 - (UIImage *)graphSnapshotImage NS_AVAILABLE_IOS(7_0);
 
+/** Allows a higher-resolution snapshot of the graph while the app is in the foreground.
+ @param size in pixels for your image.
+ @return The snapshot of the graph as a UIImage object. */
+- (UIImage *)graphSnapshotImage: (CGSize) size NS_AVAILABLE_IOS(7_0);
+
 
 /** Takes a snapshot of the graph.
  @param appIsInBackground If your app is currently in the background state, pass YES to \p appIsInBackground. Otherwise, when your app is in the foreground you should take advantage of more efficient APIs by passing NO to \p appIsInBackground.
@@ -414,6 +419,13 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 
 @optional
 
+/** The horizontal position for a point at the given index. It corresponds to the X-axis value of the Graph.
+ @discussion if this is not implemented, points will be evenly spaced along x-Axis. If you sometimes want evenly spaced and sometimes not, just return index when you want even spacing.
+ @param graph The graph object requesting the point value.
+ @param index The index from left to right of a given point (X-axis). The first value for the index is 0.
+ @return The X-axis value at a given index. */
+- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSInteger)index;
+
 
 //------- X AXIS -------//
 
@@ -435,7 +447,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 /** The string to display on the label on the Y-axis at a given value.
  @discussion this overrids yAxisPrefixOnLineGraph and yAxisSuffixfixOnLineGraph.
  @param graph The graph object which is requesting the label on the specified Y-Axis position.
- @param location The value for a label in the same units/range as valueForPointAtIndex.
+ @param value The value for a label in the same units/range as valueForPointAtIndex.
  */
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnYAxisForValue:(CGFloat)value;
 
@@ -612,13 +624,6 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @return Array of graph indices to place X-Axis labels */
 - (NSArray <NSNumber *> *)incrementPositionsForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
-//should be in datasource, not delegate
-/** The horizontal position for a point at the given index. It corresponds to the X-axis value of the Graph.
- @param graph The graph object requesting the point value.
- @param index The index from left to right of a given point (X-axis). The first value for the index is 0.
- @return The X-axis value at a given index. */
-- (CGFloat)lineGraph:(BEMSimpleLineGraphView *)graph locationForPointAtIndex:(NSInteger)index;
-
 /** The total number of X-axis labels on the line graph.
  @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. If this and lineGraph:locationForPointAtIndex: are implemented, labels may diverge from data points
  @param graph The graph object which is requesting the number of labels.
@@ -629,9 +634,9 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. Only relevant if lineGraph:locationForPointAtIndex: is implemented. If implemented, it diverges labels from data points
  @param oldScale The current scale level. 1.0 = autosized to fit all points. 2.0 would show half the chart
  @param newScale New scale level requested by pinchZoom.
- @param displayMinXValue The smallest datapoint that will be included in the chart (either index or value, depending on VariableXAxis).
+ @param displayMinXValue The smallest datapoint that will be included in the chart (either index or value, depending on whether locationForPointAtIndex is implemented).
  @param displayMaxXValue The largest datapoint that will be included in the chart.
- @return YES if zoom is ok; No if zoom is prevented. */
+ @return YES if pan/zoom is ok; No if pan/zoom is prevented. */
 -(BOOL) lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue;
 
 //----- Y AXIS -----//

@@ -822,7 +822,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         NSInteger numberLabels = [self.delegate numberOfXAxisLabelsOnLineGraph: self];
         if (numberLabels <= 0) numberLabels = 1;
         NSMutableArray <NSValue *> * labelLocs = [NSMutableArray arrayWithCapacity:(NSUInteger)numberLabels];
-        if ([self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )]) {
+        if ([self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )]) {
             CGFloat step = xAxisWidth/(numberLabels-1);
             CGFloat positionOnXAxis = 0;
             for (NSInteger i = 0; i < numberLabels; i++) {
@@ -882,7 +882,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     NSMutableArray <UIView *>   *newXAxisLabels =         [NSMutableArray arrayWithCapacity:axisIndices.count];
 
     @autoreleasepool {
-        BOOL usingLocation = [self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )];
+        BOOL usingLocation = [self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )];
         BOOL locationLabels = usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)];
         BOOL indexLabels =   !usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)];
         CGFloat valueRangeWidth = (self.maxXValue - self.minXValue) / self.zoomScale;
@@ -914,7 +914,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:positionOnXAxis  reuseNumber: index];
             [newXAxisLabels addObject:labelXAxis];
 
-            if (CGRectContainsRect(self.backgroundXAxis.bounds, labelXAxis.frame)){
+            if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth) {
                 [self.backgroundXAxis addSubview:labelXAxis];
                 if (self.enableReferenceXAxisLines &&
                     (allLabelLocations[index].CGPointValue.y < BEMNullGraphValue || self.interpolateNullValues)) {
@@ -1299,6 +1299,16 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     return [self graphSnapshotImageRenderedWhileInBackground:NO];
 }
 
+- (UIImage *)graphSnapshotImage: (CGSize) size {
+    CGRect testRect = CGRectMake(0, 0, size.height, size.width);
+    CGRect savedRect = self.frame;
+    self.frame = testRect;
+
+    UIImage * result =  [self graphSnapshotImageRenderedWhileInBackground:NO];
+    self.frame = savedRect;
+    return result;
+}
+
 - (UIImage *)graphSnapshotImageRenderedWhileInBackground:(BOOL)appIsInBackground {
     UIGraphicsBeginImageContextWithOptions(self.bounds.size, NO, [UIScreen mainScreen].scale);
 
@@ -1440,6 +1450,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (newScale <= 1.0) {
         newScale = 1.0;
         newPanMovement = 0;
+    } else if (newScale > self.numberOfPoints/2) {
+        //don't allow scaling beyond showing less than 2 points (on average)
+        newScale = self.numberOfPoints/2;
     }
     //assumes we're zooming around fixed point self.zoomCenterValue which is currently displayed at self.zoomCenterLocation
     //Now with newScale and newPanMovement,
@@ -1647,8 +1660,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         dotValue = (int)(arc4random() % 10000);
     #endif
         CGFloat xValue = index;
-        if ([self.delegate respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]){
-            xValue = [self.delegate  lineGraph:self locationForPointAtIndex:index];
+        if ([self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]){
+            xValue = [self.dataSource  lineGraph:self locationForPointAtIndex:index];
         }
         [newDataPoints addObject:[NSValue valueWithCGPoint:CGPointMake(xValue, dotValue)]];
 
