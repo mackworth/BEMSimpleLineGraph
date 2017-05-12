@@ -14,10 +14,9 @@
 
 @property (strong, nonatomic) NSDate * oldestDate, * newestDate;
 @property (assign, nonatomic) CGFloat smallestValue, biggestValue;
-@property (nonatomic, assign) NSInteger numberOfPoints;
-
 
 @property (weak, nonatomic) IBOutlet UIStepper *graphObjectIncrement;
+@property (strong, nonatomic) IBOutlet UIActivityIndicatorView * activity;
 
 @property (strong, nonatomic) NSMutableArray <NSNumber *> *arrayOfValues;
 @property (strong, nonatomic) NSMutableArray <NSDate *> *arrayOfDates;
@@ -41,9 +40,11 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.navigationItem.leftBarButtonItem = self.splitViewController.displayModeButtonItem;
+    self.activity = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
     self.navigationItem.leftItemsSupplementBackButton = YES;
-
+    UIBarButtonItem * activityButton =  [[UIBarButtonItem alloc] initWithCustomView:self.activity];
+    self.navigationItem.rightBarButtonItems = [self.navigationItem.rightBarButtonItems arrayByAddingObject:activityButton];
+    
     self.maxValue = -1.0;
     self.minValue = -1.0;
     self.maxXValue = -1.0;
@@ -66,7 +67,7 @@
 
     // Do any additional setup after loading the view.
 
-    self.graphObjectIncrement.value = 1000;
+    _numberOfPoints = 10;
 
     [self hydrateDatasets];
 
@@ -75,10 +76,26 @@
 
 #pragma mark Data management
 
+-(void) setNumberOfPoints:(NSInteger)numberOfPoints {
+    if (numberOfPoints != _numberOfPoints) {
+        NSInteger oldNumberOfPoints = _numberOfPoints;
+
+        _numberOfPoints = numberOfPoints;
+
+        if (numberOfPoints == oldNumberOfPoints + 1) {
+            [self addPointToGraph];
+        } else if (numberOfPoints == oldNumberOfPoints - 1) {
+            [self removePointFromGraph];
+        } else {
+            [self hydrateDatasets];
+        }
+        [self.myGraph reloadGraph];
+    }
+}
+
 float randomProbability () {
     return  (float) ((double)(arc4random())) / UINT32_MAX;
 }
-
 
 - (void)hydrateDatasets {
     // Reset the arrays of values (Y-Axis points) and dates (X-Axis points / labels)
@@ -87,9 +104,7 @@ float randomProbability () {
     [self.arrayOfValues removeAllObjects];
     [self.arrayOfDates removeAllObjects];
 
-    self.totalNumber = 0;
     NSDate *date = [NSDate date];
-    self.numberOfPoints = self.graphObjectIncrement.value;
     // Add objects to the array based on the stepper value
     CGFloat lastValue = 5000;
     for (int i = 0; i < self.numberOfPoints; i++) {
@@ -104,6 +119,7 @@ float randomProbability () {
         date = [self dateForGraphAfterDate:date];
     }
     [self checkMaximums];
+    self.graphObjectIncrement.value = self.numberOfPoints;
 }
 
 -(void) checkMaximums {
@@ -111,6 +127,7 @@ float randomProbability () {
     self.newestDate = [NSDate distantPast];
     self.biggestValue = -INFINITY;
     self.smallestValue = INFINITY;
+    self.totalNumber = 0;
     for (NSInteger i = 0; i < self.numberOfPoints; i++) {
         CGFloat value = self.arrayOfValues[(NSUInteger)i].floatValue;
         if (value < BEMNullGraphValue) {
@@ -119,7 +136,7 @@ float randomProbability () {
             self.smallestValue = MIN(self.smallestValue,value );
         }
     }
-    self.oldestDate = self.arrayOfDates[0];
+     if (self.arrayOfDates.count > 0) self.oldestDate = self.arrayOfDates[0];
     self.newestDate = [self.arrayOfDates lastObject]; //needs to be last for notification
 
 }
@@ -157,14 +174,7 @@ float randomProbability () {
 }
 
 - (IBAction)addOrRemovePointFromGraph:(id)sender {
-    if (self.graphObjectIncrement.value > self.numberOfPoints) {
-        [self addPointToGraph];
-    } else if (self.graphObjectIncrement.value < self.numberOfPoints) {
-        [self removePointFromGraph];
-    }
     self.numberOfPoints = self.graphObjectIncrement.value;
-    [self checkMaximums];
-    [self.myGraph reloadGraph];
 }
 
 - (void) addPointToGraph {
@@ -180,6 +190,7 @@ float randomProbability () {
     [self.arrayOfValues addObject:newValue];
     NSDate *lastDate = self.arrayOfDates.count > 0 ? [self.arrayOfDates lastObject]: [NSDate date];
     NSDate *newDate = [self dateForGraphAfterDate:lastDate];
+    self.oldestDate = newDate;
     [self.arrayOfDates addObject:newDate];
 }
 
@@ -188,8 +199,10 @@ float randomProbability () {
         // Remove point
         [self.arrayOfValues removeObjectAtIndex:0];
         [self.arrayOfDates removeObjectAtIndex:0];
+        [self checkMaximums];
     }
 }
+
 -(NSString *) formatNumber: (NSNumber *) number {
     return [NSNumberFormatter localizedStringFromNumber:number
                                                          numberStyle:NSNumberFormatterDecimalStyle];
@@ -285,6 +298,16 @@ float randomProbability () {
     } else {
         return [super respondsToSelector:aSelector];
     }
+}
+
+-(void) lineGraphDidBeginLoading:(BEMSimpleLineGraphView *)graph {
+    [self.activity startAnimating];
+
+}
+
+-(void) lineGraphDidFinishDrawing:(BEMSimpleLineGraphView *)graph {
+    [self.activity stopAnimating];
+
 }
 
 

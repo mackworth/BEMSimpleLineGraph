@@ -30,7 +30,11 @@
     //---- Draw Reference Lines ---//
     //----------------------------//
     self.layer.sublayers = nil;
-
+    if (self.points.count == 0) {
+        self.backgroundColor = self.bottomColor ?: [UIColor clearColor];
+        return;
+    };
+    
     UIBezierPath *verticalReferenceLinesPath = [UIBezierPath bezierPath];
     UIBezierPath *horizontalReferenceLinesPath = [UIBezierPath bezierPath];
     UIBezierPath *referenceFramePath = [UIBezierPath bezierPath];

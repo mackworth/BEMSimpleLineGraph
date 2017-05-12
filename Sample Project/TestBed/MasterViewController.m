@@ -94,6 +94,7 @@ static NSString * checkOn = @"☒";
 @property (strong, nonatomic) IBOutlet BEMSimpleLineGraphView *myGraph;
 
 @property (strong, nonatomic) NSDictionary <NSString *, id> *methodList;
+@property (strong, nonatomic) IBOutlet UITextField *numberOfPointsField;
 
 @property (strong, nonatomic) IBOutlet UITextField *widthLine;
 @property (strong, nonatomic) IBOutlet UITextField *staticPaddingField;
@@ -219,13 +220,15 @@ static NSDateFormatter *dateFormatter = nil;
     [self.detailViewController addObserver:self forKeyPath:@"newestDate" options:NSKeyValueObservingOptionNew context:nil];
     [self restoreProperties];
     [self restoreUI];
-
+    [self.detailViewController addObserver:self forKeyPath:@"numberOfPoints" options:NSKeyValueObservingOptionNew context:nil];
 }
 
 -(void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
-//    if ([keyPath isEqualToString:@"newestDate"]) {
+    if ([keyPath isEqualToString:@"newestDate"]) {
         [self rangePlaceHolders:self];
-//    }
+    } else if ([keyPath isEqualToString:@"numberOfPoints"]) {
+        self.numberOfPointsField.intValue = self.detailViewController.numberOfPoints ;
+    }
 }
 
 -(void) applicationWillResign:(id) sender {
@@ -309,6 +312,7 @@ if ([defaults type ##ForKey:@#property]) { \
 self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
+    RestoreDetail (numberOfPoints, integer );
     RestoreDetail (percentNulls, float );
     RestoreDetail (popUpText, object);
     RestoreDetail (popUpPrefix, object);
@@ -396,6 +400,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [defaults setFloat:self.myGraph.labelFont.pointSize forKey:@"labelFontSize"] ;
 
 #define EncodeDetail(property, type) [defaults set ## type: self.detailViewController.property forKey:@#property]
+    EncodeDetail (numberOfPoints, Integer );
     EncodeDetail (percentNulls, Float );
 
     EncodeDetail (popUpText, Object);
@@ -425,6 +430,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 
 -(void) restoreUI {
+    self.numberOfPointsField.intValue = self.detailViewController.numberOfPoints;
     self.widthLine.floatValue = self.myGraph.widthLine;
     self.staticPaddingField.floatValue = self.detailViewController.staticPaddingValue;
     self.bezierSwitch.on = self.myGraph.enableBezierCurve;
@@ -535,6 +541,12 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     Gradient choices
  */
 
+- (IBAction)numberOfPointsDidChange:(UITextField *)sender {
+    NSInteger value = sender.intValue;
+    if (value >= 0 ) {
+        self.detailViewController.numberOfPoints = value;
+    }
+}
 
 #pragma mark Main Line
 - (IBAction)widthLineDidChange:(UITextField *)sender {
@@ -879,6 +891,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 - (IBAction)animationGraphStyle:(UIButton *)sender {
     if (self.myGraph.animationGraphStyle == BEMLineAnimationNone) {
         self.myGraph.animationGraphStyle = BEMLineAnimationDraw;
+        self.myGraph.animationGraphEntranceTime = self.animationEntranceTime.floatValue;
     } else {
         self.myGraph.animationGraphStyle ++;
     }
@@ -887,7 +900,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 - (IBAction)animationGraphEntranceTimeDidChange:(UITextField *)sender {
-    self.myGraph.animationGraphEntranceTime = (CGFloat) sender.text.floatValue;
+    self.myGraph.animationGraphEntranceTime = (CGFloat) sender.floatValue;
     [self.myGraph reloadGraph];
 }
 
@@ -1202,7 +1215,8 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 -(void) dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    [self.detailViewController removeObserver:self forKeyPath:@"totalNumber" ];
+    [self.detailViewController removeObserver:self forKeyPath:@"newestDate" ];
+    [self.detailViewController removeObserver:self forKeyPath:@"numberOfPoints" ];
 
 }
 @end

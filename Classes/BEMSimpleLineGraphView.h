@@ -157,7 +157,9 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 
 
 /** Animation style used when the graph appears. Default value is BEMLineAnimationDraw.
- @see Refer to \p BEMLineAnimation for a complete list of animation styles. */
+ @see Refer to \p BEMLineAnimation for a complete list of animation styles. 
+ @discussion Setting this to BEMLineANimationNone also sets animationGraphEntranceTime to zero.
+ */
 @property (nonatomic) BEMLineAnimation animationGraphStyle;
 
 
@@ -484,7 +486,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 /** Sent to the delegate each time the line graph finishes animating and drawing.
  @discussion The respective graph object has been completely drawn and animated at this point. It is safe to use \p graphSnapshotImage after recieving this method call on the delegate.
 
- This method may be called in addition to the \p lineGraphDidFinishLoading: method, after drawing has completed. \p animationGraphEntranceTime is taken into account when calling this method.
+ This method will be called in addition to the \p lineGraphDidFinishLoading: method, after drawing has completed. \p animationGraphEntranceTime is taken into account when calling this method.
 
  @seealso lineGraphDidFinishLoading:
  @param graph The graph object that finished drawing. */

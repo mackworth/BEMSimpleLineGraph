@@ -20,7 +20,7 @@
 
 @property (readonly) NSDate * oldestDate, * newestDate;
 @property (readonly) CGFloat smallestValue, biggestValue;
-@property (readonly) NSInteger numberOfPoints;
+@property (assign, nonatomic) NSInteger numberOfPoints;
 @property (assign, nonatomic) float percentNulls;
 
 //data needed to implement delegate methods

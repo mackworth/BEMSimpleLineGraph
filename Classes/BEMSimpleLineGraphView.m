@@ -74,9 +74,6 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 /// Label to display when there is no data
 @property (strong, nonatomic) UILabel *noDataLabel;
 
-/// Cirle to display when there's only one datapoint
-@property (strong, nonatomic) BEMCircle *oneDot;
-
 /// The label displayed when enablePopUpReport is set to YES
 @property (strong, nonatomic) UILabel *popUpLabel;
 
@@ -355,22 +352,23 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         [self.delegate lineGraphDidBeginLoading:self];
 
     // Get the number of points in the graph
-    [self layoutNumberOfPoints];
+    self.numberOfPoints = [self getNumberOfPoints];
 
-    if (self.numberOfPoints <= 1) {
-        return;
+    if (self.numberOfPoints <= 0) {
+        [self showNoData];
     } else {
+        [self clearNoData];
         // Draw the graph
         [self drawEntireGraph];
 
         // Setup the touch report
         [self layoutTouchReport];
         [self startUserScaling];
-
-        // Let the delegate know that the graph finished updates
-        if ([self.delegate respondsToSelector:@selector(lineGraphDidFinishLoading:)])
-            [self.delegate lineGraphDidFinishLoading:self];
     }
+    // Let the delegate know that the graph finished updates
+    if ([self.delegate respondsToSelector:@selector(lineGraphDidFinishLoading:)])
+        [self.delegate lineGraphDidFinishLoading:self];
+    [self didFinishDrawingWithAnimation: self.numberOfPoints > 0];
 
 }
 
@@ -389,67 +387,51 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             [subSubView removeFromSuperview];
         }
     }
+    self.masterLine.points = @[];
+    [self.masterLine setNeedsDisplay];
 }
 
-- (void)layoutNumberOfPoints {
+- (NSInteger) getNumberOfPoints {
     // Get the total number of data points from the delegate
 #ifndef TARGET_INTERFACE_BUILDER
     if ([self.dataSource respondsToSelector:@selector(numberOfPointsInLineGraph:)]) {
-        self.numberOfPoints = [self.dataSource numberOfPointsInLineGraph:self];
+        return [self.dataSource numberOfPointsInLineGraph:self];
     } else {
-        self.numberOfPoints = 0;
+        return 0;
     }
 #else
-    self.numberOfPoints = 10;
+    return 10;
 #endif
+}
+
+-(void) clearNoData {
     [self.noDataLabel removeFromSuperview];
-    [self.oneDot  removeFromSuperview];
+}
 
-   if (self.numberOfPoints == 0) {
-       // There are no points to load
-        [self clearGraph];
-        if (self.delegate &&
-            [self.delegate respondsToSelector:@selector(noDataLabelEnableForLineGraph:)] &&
-            ![self.delegate noDataLabelEnableForLineGraph:self]) {
-            return;
-        }
+-(void) showNoData {
+   // There are no points to load
+    [self clearGraph];
+   if (self.delegate &&
+       [self.delegate respondsToSelector:@selector(noDataLabelEnableForLineGraph:)] &&
+       ![self.delegate noDataLabelEnableForLineGraph:self]) {
+       return ;
+   }
 
-        NSLog(@"[BEMSimpleLineGraph] Data source contains no data. A no data label will be displayed and drawing will stop. Add data to the data source and then reload the graph.");
-        self.noDataLabel = [[UILabel alloc] initWithFrame:self.bounds];
-        self.noDataLabel.backgroundColor = [UIColor clearColor];
-        self.noDataLabel.textAlignment = NSTextAlignmentCenter;
-        NSString *noDataText = nil;
-        if ([self.delegate respondsToSelector:@selector(noDataLabelTextForLineGraph:)]) {
-            noDataText = [self.delegate noDataLabelTextForLineGraph:self];
-        }
-        self.noDataLabel.text = noDataText ?: NSLocalizedString(@"No Data", nil);
-        self.noDataLabel.font = self.noDataLabelFont ?: [UIFont preferredFontForTextStyle:UIFontTextStyleCaption1];
-        self.noDataLabel.textColor = self.noDataLabelColor ?: (self.colorXaxisLabel ?: [UIColor blackColor]);
+   NSLog(@"[BEMSimpleLineGraph] Data source contains no data. A no data label will be displayed and drawing will stop. Add data to the data source and then reload the graph.");
+   if (!self.noDataLabel) {
+       self.noDataLabel = [[UILabel alloc] initWithFrame:self.bounds];
+       self.noDataLabel.backgroundColor = [UIColor clearColor];
+       self.noDataLabel.textAlignment = NSTextAlignmentCenter;
+   }
+   NSString *noDataText = NSLocalizedString(@"No Data", nil);
+   if ([self.delegate respondsToSelector:@selector(noDataLabelTextForLineGraph:)]) {
+       noDataText = [self.delegate noDataLabelTextForLineGraph:self];
+   }
+   self.noDataLabel.text = noDataText;
+   self.noDataLabel.font = self.noDataLabelFont ?: [UIFont preferredFontForTextStyle:UIFontTextStyleTitle1];
+   self.noDataLabel.textColor = self.noDataLabelColor ?: (self.colorXaxisLabel ?: [UIColor blackColor]);
 
-        [self addSubview:self.noDataLabel];
-
-        // Let the delegate know that the graph finished layout updates
-       if ([self.delegate respondsToSelector:@selector(lineGraphDidFinishLoading:)]) {
-            [self.delegate lineGraphDidFinishLoading:self];
-       }
-
-    } else if (self.self.numberOfPoints == 1) {
-        NSLog(@"[BEMSimpleLineGraph] Data source contains only one data point. Add more data to the data source and then reload the graph.");
-        [self clearGraph];
-        BEMCircle *circleDot = [[BEMCircle alloc] initWithFrame:CGRectMake(0, 0, self.sizePoint, self.sizePoint)];
-        circleDot.center = self.labelsView.center;
-        circleDot.color = self.colorPoint;
-        circleDot.alpha = 1.0f;
-
-        [self addSubview:circleDot];
-        self.oneDot = circleDot;
-
-        // Let the delegate know that the graph finished layout updates
-        if ([self.delegate respondsToSelector:@selector(lineGraphDidFinishLoading:)]) {
-            [self.delegate lineGraphDidFinishLoading:self];
-        }
-        
-    }
+   [self addSubview:self.noDataLabel];
 }
 
 - (void)startUserScaling {
@@ -523,9 +505,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 #pragma mark - Drawing
 
-- (void)didFinishDrawing {
+- (void)didFinishDrawingWithAnimation:(BOOL) animated {
+    NSTimeInterval animateTime = animated ? self.animationGraphEntranceTime : 0.01;
     if ([self.delegate respondsToSelector:@selector(lineGraphDidFinishDrawing:)]) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t) (self.animationGraphEntranceTime * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t) (animateTime * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             // Let the delegate know that the graph finished rendering
             [self.delegate lineGraphDidFinishDrawing:self];
 
@@ -586,8 +569,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     // Draw the data points and labels
     [self drawDots];
-
-    [self didFinishDrawing];
 
 }
 
@@ -652,10 +633,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (void)drawDots {
-
     // Loop through each point and add it to the graph
     NSUInteger numPoints = (NSUInteger) self.numberOfPoints;
-    NSMutableArray <UIView *> *newPopups = [NSMutableArray arrayWithCapacity:numPoints];
+    NSMutableArray <UILabel *> *newPopups = [NSMutableArray arrayWithCapacity:numPoints];
     NSMutableArray <UIView *> *newDots = [NSMutableArray arrayWithCapacity:numPoints];
     @autoreleasepool {
         for (NSUInteger index = 0; index < numPoints; index++) {
@@ -669,14 +649,13 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             } else {
                 label = [[UILabel alloc] initWithFrame:CGRectZero];
             }
-            [newPopups addObject:label ];
 
             if (circleDot.superview) {
 
                 if ((self.alwaysDisplayPopUpLabels == YES)  &&
                     (![self.delegate respondsToSelector:@selector(lineGraph:alwaysDisplayPopUpAtIndex:)] ||
                       [self.delegate lineGraph:self alwaysDisplayPopUpAtIndex:(NSInteger)index])) {
-                    label = [self configureLabel:label forPoint: circleDot ];
+                        label = [self configureLabel:label forPoint: circleDot avoiding: newPopups ];
 
                 } else {
                     //not showing labels this time, so remove if any
@@ -686,12 +665,13 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                 // Dot and/or label entrance animation
                 circleDot.alpha = 0.0f;
                 label.alpha = 0.0f;
+                BOOL displayDots = self.alwaysDisplayDots || self.numberOfPoints == 1;
                 if (self.animationGraphEntranceTime <= 0) {
-                    if (self.alwaysDisplayDots ) {
+                    if (displayDots) {
                         circleDot.alpha = 1.0f;
                     }
                    if (label) label.alpha = 1.0f;
-                } else if (!_displayDotsWhileAnimating && self.alwaysDisplayDots) {
+                } else if (!_displayDotsWhileAnimating && displayDots) {
                     //turn all dots/labels on after main animation.
                     [UIView animateWithDuration:0.3
                                           delay:self.animationGraphEntranceTime - 0.3
@@ -701,7 +681,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                                          label.alpha = 1.0;
                                      }
                                      completion:nil ];
-                } else if (label || self.displayDotsWhileAnimating || self.alwaysDisplayDots) {
+                } else if (label || self.displayDotsWhileAnimating || displayDots) {
                     [UIView animateWithDuration: MAX(0.3,self.animationGraphEntranceTime/self.numberOfPoints)
                                           delay: self.animationGraphEntranceTime*(circleDot.center.x/CGRectGetMaxX(self.dotsView.bounds))
                                         options:UIViewAnimationOptionCurveLinear
@@ -711,10 +691,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                                 if (label) label.alpha = 1.0;
                             }
                     } completion:^(BOOL finished) {
-                        if (self.alwaysDisplayDots != self.displayDotsWhileAnimating ||
+                        if (displayDots != self.displayDotsWhileAnimating ||
                             (label && !self.displayDotsWhileAnimating)  ) {
                             [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-                                circleDot.alpha = self.alwaysDisplayDots ? 1 : 0;
+                                circleDot.alpha = displayDots ? 1 : 0;
                                 if (label) label.alpha = 1.0;
                             } completion:nil];
                         }
@@ -724,7 +704,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             } else {
                 [label removeFromSuperview];
             }
-        }
+            [newPopups addObject:label ];
+       }
         for (NSUInteger i = numPoints; i < self.circleDots.count;  i++) {
             [self.permanentPopups[i] removeFromSuperview]; //no harm if not showing
             [self.circleDots [i] removeFromSuperview];
@@ -779,7 +760,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
     line.averageLine = self.averageLine;
 
-    line.disableMainLine = self.displayDotsOnly;
+    line.disableMainLine = self.displayDotsOnly && self.numberOfPoints > 1;
 
     [self.masterLine setNeedsDisplay];
 
@@ -1139,7 +1120,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
 
     UILabel * averageLabel = nil;
-    if (self.averageLine.enableAverageLine && self.averageLine.title.length > 0) {
+    if (self.averageLine.enableAverageLine && self.averageLine.title.length > 0 && self.numberOfPoints > 1) {
         self.averageLine.yValue = self.getAverageValue;
         averageLabel = [self yAxisLabelWithText:self.averageLine.title
                                                  atValue:self.averageLine.yValue
@@ -1171,7 +1152,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 
-- (UILabel *)configureLabel: (UILabel *) oldLabel forPoint: (BEMCircle *)circleDot  {
+- (UILabel *)configureLabel: (UILabel *) oldLabel forPoint: (BEMCircle *)circleDot avoiding: (NSArray <UILabel *> *) previousLabels {
 
     UILabel *newPopUpLabel = oldLabel;
     if ( !newPopUpLabel) {
@@ -1218,7 +1199,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     if ( [self adjustYLocForLabel:newPopUpLabel
                           atIndex:index
-                       avoidingDot:circleDot.frame] ) {
+                       avoidingDot:circleDot.frame
+                        andLabels: previousLabels] ) {
         [self.labelsView addSubview:newPopUpLabel];
     } else {
        [newPopUpLabel removeFromSuperview];
@@ -1243,7 +1225,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     popUpLabel.center = CGPointMake(xCenter, popUpLabel.center.y);
 }
 
--(BOOL) adjustYLocForLabel: (UIView *) popUpLabel atIndex:(NSInteger) myIndex avoidingDot: (CGRect) dotFrame  {
+-(BOOL) adjustYLocForLabel: (UIView *) popUpLabel atIndex:(NSInteger) myIndex avoidingDot: (CGRect) dotFrame andLabels: (NSArray <UILabel *> *) previousLabels {
     //returns YES if it can avoid neighbors to left
     //note: index < 0 for no checking neighbors
     //check for bumping into top OR overlap with left neighbors
@@ -1256,8 +1238,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (CGRectGetMinY(popUpLabel.frame) > 2.0f) {
         BOOL noConflict = YES;
         if (myIndex < 0) return YES;
-        for (NSInteger index = myIndex-1; index >=0; index --) {
-            UIView * neighbor = self.permanentPopups[(NSUInteger)index];
+        for (UILabel * neighbor in previousLabels.reverseObjectEnumerator) {
             if (!neighbor.superview) continue;
             if (leftEdge > CGRectGetMaxX(neighbor.frame)) {
                 return YES; //no conflicts found at all
@@ -1277,8 +1258,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (CGRectGetMaxY(frame) < CGRectGetMaxY(self.labelsView.bounds)) {
         BOOL noConflict = YES;
         if (myIndex < 0) return YES;
-       for (NSInteger index = myIndex-1; index >=0; index --) {
-            UIView * neighbor = self.permanentPopups[(NSUInteger)index];
+       for (UILabel * neighbor in previousLabels.reverseObjectEnumerator ) {
            if (!neighbor.superview) continue;
             if (leftEdge > CGRectGetMaxX(neighbor.frame)) {
                 return YES; //no conflicts found at all
@@ -1577,7 +1557,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             if (self.customPopUpView) {
                 [self.labelsView addSubview:self.customPopUpView];
                 [self adjustXLocForLabel:self.customPopUpView avoidingDot:closestDot.frame];
-                [self adjustYLocForLabel:self.customPopUpView atIndex: -1 avoidingDot:closestDot.frame ];
+                [self adjustYLocForLabel:self.customPopUpView atIndex: -1 avoidingDot:closestDot.frame andLabels:self.permanentPopups ];
                 if ([self.delegate respondsToSelector:@selector(lineGraph:modifyPopupView:forIndex:)]) {
                     self.customPopUpView.alpha = 1.0f;
                     [self.delegate lineGraph:self modifyPopupView:self.customPopUpView forIndex:index];
@@ -1591,9 +1571,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                     self.popUpLabel = [[UILabel alloc] initWithFrame:CGRectZero];
                 }
                 [self.labelsView addSubview: self.popUpLabel ];
-                self.popUpLabel = [self configureLabel:self.popUpLabel forPoint:closestDot];
+                self.popUpLabel = [self configureLabel:self.popUpLabel forPoint:closestDot avoiding:self.permanentPopups];
                 [self adjustXLocForLabel:self.popUpLabel avoidingDot:closestDot.frame];
-                [self adjustYLocForLabel:self.popUpLabel atIndex: -1 avoidingDot:closestDot.frame ];
+                [self adjustYLocForLabel:self.popUpLabel atIndex: -1 avoidingDot:closestDot.frame andLabels:self.permanentPopups];
                 [UIView animateWithDuration:0.2f delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
                     self.popUpLabel.alpha = 1.0f;
                 } completion:nil];
@@ -1610,7 +1590,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         }
 
         [UIView animateWithDuration:0.2 delay:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-            if (self.alwaysDisplayDots == NO && self.displayDotsOnly == NO) {
+            if (self.alwaysDisplayDots == NO && self.displayDotsOnly == NO && self.numberOfPoints > 1) {
                 closestDot.alpha = 0;
             }
             self.touchInputLine.alpha = 0;
@@ -1630,7 +1610,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     CGFloat currentlyCloser = CGFLOAT_MAX;
     for (BEMCircle *point in self.circleDots) {
         if (!point.superview) continue;
-        if (self.alwaysDisplayDots == NO && self.displayDotsOnly == NO) {
+        if (self.alwaysDisplayDots == NO && self.displayDotsOnly == NO && self.numberOfPoints > 1) {
             point.alpha = 0;
         }
         CGFloat distance = (CGFloat)fabs(point.center.x - touchInputLine.center.x) ;
@@ -1671,12 +1651,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 -(void) calculateMinMax {
 #ifndef TARGET_INTERFACE_BUILDER
-    self.maxYValue = [self getMaximumYValue];
-    self.minYValue = [self getMinimumYValue];
-    self.maxXValue = [self getMaximumXValue];
-    self.minXValue = [self getMinimumXValue];
-    if (self.maxYValue < self.minYValue) self.maxYValue = self.minYValue+1;
-    if (self.maxXValue < self.minXValue) self.maxXValue = self.minXValue+1;
+    self.maxYValue = [self getMaximumYValue]; if (self.maxYValue <= -FLT_MAX) self.maxYValue = 0;
+    self.minYValue = [self getMinimumYValue]; if (self.minYValue >= INFINITY) self.minYValue = 0;
+    self.maxXValue = [self getMaximumXValue]; if (self.maxXValue <= -FLT_MAX) self.maxXValue = 0;
+    self.minXValue = [self getMinimumXValue]; if (self.minXValue >= INFINITY) self.minXValue = 0;
+    if (self.maxYValue < self.minYValue) self.maxYValue = self.minYValue;
+    if (self.maxXValue < self.minXValue) self.maxXValue = self.minXValue;
 
     if (self.zoomScale <= 1.0 || isnan(self.minXDisplayedValue )) {
         _zoomScale = 1.0;
@@ -1699,14 +1679,19 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 -(NSArray <NSValue *> *) layoutPoints {
     //now calculate point locations in view
+    NSMutableArray <NSValue *> * newLocs = [NSMutableArray arrayWithCapacity:(NSUInteger)self.numberOfPoints];
+
     CGFloat xAxisWidth = CGRectGetMaxX(self.dotsView.bounds);
     CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
-    CGFloat valueRangeWidth = (totalValueRangeWidth) / self.zoomScale;
+    CGFloat valueRangeWidth  = totalValueRangeWidth / self.zoomScale;
+    if (totalValueRangeWidth <= 0) {    //all x values same, e.g. only one point
+        valueRangeWidth = xAxisWidth;
+    }
     CGFloat displayRatio = xAxisWidth/valueRangeWidth;
 
-    NSMutableArray <NSValue *> * newLocs = [NSMutableArray arrayWithCapacity:(NSUInteger)self.numberOfPoints];
     for (NSValue * value in self.dataPoints) {
         CGFloat positionOnXAxis = (value.CGPointValue.x - self.minXDisplayedValue) * displayRatio ;
+        if (totalValueRangeWidth <= 0) positionOnXAxis = xAxisWidth/2;
         CGFloat positionOnYAxis = [self yPositionForDotValue:value.CGPointValue.y];
         [newLocs addObject:[NSValue valueWithCGPoint: CGPointMake(positionOnXAxis, positionOnYAxis)]];
     }
@@ -1790,9 +1775,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (CGFloat)yPositionForDotValue:(CGFloat)dotValue {
-    if (isnan(dotValue) || dotValue >= BEMNullGraphValue) {
-        return BEMNullGraphValue;
-    }
     CGFloat height = self.dotsView.bounds.size.height;
     CGFloat positionOnYAxis; // The position on the Y-axis of the point currently being created.
     CGFloat padding = MIN(90.0f, height/2);
@@ -1805,6 +1787,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         if (self.minYValue >= self.maxYValue ) {
             positionOnYAxis = height/2;
         } else {
+            if (isnan(dotValue) || dotValue >= BEMNullGraphValue) {
+                return BEMNullGraphValue;
+            }
             CGFloat percentValue = (dotValue - self.minYValue) / (self.maxYValue - self.minYValue);
             CGFloat bottomOfChart = CGRectGetMaxY(self.dotsView.bounds)- padding/2.0f;
             CGFloat sizeOfChart = CGRectGetMaxY(self.dotsView.bounds) - padding;
