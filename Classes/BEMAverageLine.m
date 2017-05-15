@@ -22,7 +22,7 @@
     return self;
 }
 
-- (instancetype) initWithCoder:(NSCoder *)coder {
+- (instancetype)initWithCoder:(NSCoder *)coder {
 
 #define RestoreProperty(property, type) {\
 if ([coder containsValueForKey:@#property]) { \
@@ -46,7 +46,7 @@ self.property = [coder decode ## type ##ForKey:@#property ]; \
     return self;
 }
 
-- (void) encodeWithCoder: (NSCoder *)coder {
+- (void)encodeWithCoder:(NSCoder *)coder {
 
 #define EncodeProperty(property, type) [coder encode ## type: self.property forKey:@#property]
     EncodeProperty (enableAverageLine, Bool);
@@ -60,14 +60,14 @@ self.property = [coder decode ## type ##ForKey:@#property ]; \
 
 
 
--(void) setLabel:(UILabel *)label {
+- (void)setLabel:(UILabel *)label {
     if (_label != label) {
         [_label removeFromSuperview];
         _label = label;
     }
 }
 
--(void) dealloc {
+- (void)dealloc {
     self.label= nil;
 }
 @end

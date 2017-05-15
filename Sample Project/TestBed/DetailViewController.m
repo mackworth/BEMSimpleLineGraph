@@ -76,7 +76,7 @@
 
 #pragma mark Data management
 
--(void) setNumberOfPoints:(NSInteger)numberOfPoints {
+- (void)setNumberOfPoints:(NSInteger)numberOfPoints {
     if (numberOfPoints != _numberOfPoints) {
         NSInteger oldNumberOfPoints = _numberOfPoints;
 
@@ -122,7 +122,7 @@ float randomProbability () {
     self.graphObjectIncrement.value = self.numberOfPoints;
 }
 
--(void) checkMaximums {
+- (void)checkMaximums {
     self.oldestDate = [NSDate distantFuture];
     self.newestDate = [NSDate distantPast];
     self.biggestValue = -INFINITY;
@@ -153,7 +153,7 @@ float randomProbability () {
     return label;
 }
 
--(void) setPercentNulls:(float)percentNulls {
+- (void)setPercentNulls:(float)percentNulls {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refresh:)  object:nil];
     _percentNulls = percentNulls;
     [self performSelector:@selector(refresh:) withObject:nil afterDelay:0.25];
@@ -177,7 +177,7 @@ float randomProbability () {
     self.numberOfPoints = self.graphObjectIncrement.value;
 }
 
-- (void) addPointToGraph {
+- (void)addPointToGraph {
     // Add point
     NSNumber * newValue ;
     if (randomProbability() < self.percentNulls) {
@@ -194,7 +194,7 @@ float randomProbability () {
     [self.arrayOfDates addObject:newDate];
 }
 
-- (void) removePointFromGraph {
+- (void)removePointFromGraph {
     if (self.arrayOfValues.count > 0) {
         // Remove point
         [self.arrayOfValues removeObjectAtIndex:0];
@@ -203,7 +203,7 @@ float randomProbability () {
     }
 }
 
--(NSString *) formatNumber: (NSNumber *) number {
+- (NSString *)formatNumber:(NSNumber *)number {
     return [NSNumberFormatter localizedStringFromNumber:number
                                                          numberStyle:NSNumberFormatterDecimalStyle];
 }
@@ -237,7 +237,7 @@ float randomProbability () {
     return self.arrayOfValues [(NSUInteger)index].doubleValue;
 }
 
--(NSInteger) numberOfXAxisLabelsOnLineGraph: graph {
+- (NSInteger)numberOfXAxisLabelsOnLineGraph:graph {
     return self.numberofXAxisLabels;
 }
 
@@ -248,7 +248,7 @@ float randomProbability () {
 
 #pragma mark - SimpleLineGraph Delegate
 
--(BOOL) respondsToSelector:(SEL)aSelector {
+- (BOOL)respondsToSelector:(SEL)aSelector {
     if (aSelector == @selector(popUpTextForlineGraph:atIndex:)) {
         return self.popUpText.length > 0;
     } else if (aSelector == @selector(popUpPrefixForlineGraph:)) {
@@ -300,12 +300,12 @@ float randomProbability () {
     }
 }
 
--(void) lineGraphDidBeginLoading:(BEMSimpleLineGraphView *)graph {
+- (void)lineGraphDidBeginLoading:(BEMSimpleLineGraphView *)graph {
     [self.activity startAnimating];
 
 }
 
--(void) lineGraphDidFinishDrawing:(BEMSimpleLineGraphView *)graph {
+- (void)lineGraphDidFinishDrawing:(BEMSimpleLineGraphView *)graph {
     [self.activity stopAnimating];
 
 }
@@ -333,7 +333,7 @@ float randomProbability () {
     return self.popUpPrefix;
 }
 
--(NSString *) popUpTextForlineGraph:(BEMSimpleLineGraphView *)graph atIndex:(NSInteger)index {
+- (NSString *)popUpTextForlineGraph:(BEMSimpleLineGraphView *)graph atIndex:(NSInteger)index {
     if (!self.popUpText) return @"Empty format string";
     @try {
 #pragma clang diagnostic push
@@ -459,7 +459,7 @@ float randomProbability () {
         } completion:nil];
     }];
 }
--(BOOL) lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue {
+- (BOOL)lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue {
     //  NSLog(@"Scaling %0.2f from %f to %f", newScale, displayMinXValue, displayMaxXValue);
     NSTimeInterval displayedRange = 0;
     if (self.variableXAxis) {
@@ -488,7 +488,7 @@ float randomProbability () {
     return YES;
 }
 
--(void) updateLabelsBelowGraph: (BEMSimpleLineGraphView *)graph {
+- (void)updateLabelsBelowGraph:(BEMSimpleLineGraphView *)graph {
     if (self.arrayOfValues.count > 0) {
         NSNumber * sum = [[BEMGraphCalculator sharedCalculator] calculatePointValueSumOnGraph:graph];
         self.labelValues.text =[self formatNumber:sum];

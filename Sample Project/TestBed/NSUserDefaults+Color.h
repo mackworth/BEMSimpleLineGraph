@@ -10,7 +10,7 @@
 @import UIKit;
 @interface NSUserDefaults (Color)
 
-- (UIColor *) colorForKey:(NSString *) colorKey;
-- (void) setColor:(UIColor *) color forKey:(NSString *) colorKey;
+- (UIColor *)colorForKey:(NSString *)colorKey;
+- (void)setColor:(UIColor *)color forKey:(NSString *)colorKey;
 
 @end

@@ -12,13 +12,10 @@
 #import "MSColorSelectionViewController.h"
 #import "NSUserDefaults+Color.h"
 #import "BEMGraphCalculator.h"
+#import "UITextField+Numbers.h"
+#import "UIButton+Switch.m"
 
 //some convenience extensions for setting and reading
-@interface UITextField (Numbers)
-@property (nonatomic) CGFloat floatValue;
-@property (nonatomic) NSInteger intValue;
-
-@end
 
 @interface MasterViewController () <MSColorSelectionViewControllerDelegate, UIPopoverPresentationControllerDelegate>
 
@@ -27,67 +24,6 @@
 @property (strong, nonatomic) NSString * currentColorKey;
 @property (strong, nonatomic) UIView * currentColorChip;
 @end
-
-@implementation UITextField (Numbers)
-
--(void) setFloatValue:(CGFloat) num {
-    if (num < 0.0) {
-        self.text = @"";
-    } else if (num >= NSNotFound ) {
-            self.text = @"oopsf";
-    } else {
-        self.text = [NSString stringWithFormat:@"%0.1f",num];
-    }
-}
-
--(void) setIntValue:(NSInteger) num {
-    if (num == NSNotFound ) {
-        self.text = @"";
-    } else if (num == -1 ) {
-        self.text = @"";
-    }else {
-        self.text = [NSString stringWithFormat:@"%d",(int)num];
-    }
-}
-
--(CGFloat) floatValue {
-    if (self.text.length ==0) {
-        return -1.0;
-    } else {
-        return (CGFloat) self.text.floatValue;
-    }
-}
-
--(NSInteger) intValue {
-    if (self.text.length ==0) {
-        return -1;
-    } else {
-        return  self.text.integerValue;
-    }
-
-}
-
-@end
-
-@interface UIButton (Switch)
-@property (nonatomic) BOOL on;
-@end\
-
-@implementation UIButton (Switch)
-static NSString * checkOff = @"☐";
-static NSString * checkOn = @"☒";
-
--(void) setOn: (BOOL) on {
-    [self setTitle: (on ? checkOn : checkOff) forState:UIControlStateNormal];
-}
-
--(BOOL) on  {
-    if (!self.currentTitle) return NO;
-    return [checkOff isEqualToString: ( NSString * _Nonnull )self.currentTitle ];
-}
-
-@end
-
 
 @interface MasterViewController () <ARFontPickerViewControllerDelegate, UITextFieldDelegate>
 
@@ -207,6 +143,7 @@ static NSDateFormatter *dateFormatter = nil;
     // Do any additional setup after loading the view, typically from a nib.
     dateFormatter = [[NSDateFormatter alloc]init];
     [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    self.title = @"Options";
 
     self.detailViewController = (DetailViewController *)[[self.splitViewController.viewControllers lastObject] topViewController];
     [self.detailViewController loadViewIfNeeded];
@@ -221,9 +158,11 @@ static NSDateFormatter *dateFormatter = nil;
     [self restoreProperties];
     [self restoreUI];
     [self.detailViewController addObserver:self forKeyPath:@"numberOfPoints" options:NSKeyValueObservingOptionNew context:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showDetailTargetDidChange:) name:UIViewControllerShowDetailTargetDidChangeNotification object:nil];
+    [self showDetailTargetDidChange:self];
 }
 
--(void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if ([keyPath isEqualToString:@"newestDate"]) {
         [self rangePlaceHolders:self];
     } else if ([keyPath isEqualToString:@"numberOfPoints"]) {
@@ -231,11 +170,11 @@ static NSDateFormatter *dateFormatter = nil;
     }
 }
 
--(void) applicationWillResign:(id) sender {
+- (void)applicationWillResign:(id)sender {
     [self saveProperties];
 }
 
--(void) restoreProperties {
+- (void)restoreProperties {
     NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
 
 #define RestoreProperty(property, type) \
@@ -339,7 +278,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     RestoreDetail (incrementValueForYAxis, float );}
 
 
--(void) saveProperties{
+- (void)saveProperties{
 
     NSUserDefaults * defaults = [NSUserDefaults standardUserDefaults];
 #define EncodeProperty(property, type) [defaults set ## type: self.myGraph.property forKey:@#property]
@@ -429,7 +368,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 
--(void) restoreUI {
+- (void)restoreUI {
     self.numberOfPointsField.intValue = self.detailViewController.numberOfPoints;
     self.widthLine.floatValue = self.myGraph.widthLine;
     self.staticPaddingField.floatValue = self.detailViewController.staticPaddingValue;
@@ -521,7 +460,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 
 }
--(void) rangePlaceHolders: (id) sender {
+- (void)rangePlaceHolders:(id)sender {
     //give user a hint on what range is ok for min/max
     self.maxValueField.placeholder = [NSString stringWithFormat:@"%0.2f",self.detailViewController.biggestValue ];
     self.minValueField.placeholder = [NSString stringWithFormat:@"%0.2f",self.detailViewController.smallestValue ];
@@ -635,7 +574,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [self.myGraph reloadGraph];
 }
 
--(NSTimeInterval) timeIntervalFromString: (NSString *) string {
+- (NSTimeInterval)timeIntervalFromString:(NSString *)string {
      NSDate *date = [dateFormatter dateFromString:string ];
     return (date) ? [date timeIntervalSinceReferenceDate] : 0;
  }
@@ -746,7 +685,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [self.myGraph reloadGraph];
 }
 
--(void) updateReferenceAxisFrame: (BOOL) newState {
+- (void)updateReferenceAxisFrame:(BOOL)newState {
     self.myGraph.enableReferenceAxisFrame = newState;
     self.frameReferenceAxesCell.alpha = newState ? 1.0 : 0.5 ;
     self.frameReferenceAxesCell.userInteractionEnabled = newState;
@@ -863,7 +802,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 //    BEMLineAnimationNone
 //};
 //
--(void) updateAnimationGraphStyle {
+- (void)updateAnimationGraphStyle {
     NSString * newTitle = @"";
     switch (self.myGraph.animationGraphStyle) {
         case BEMLineAnimationDraw:
@@ -934,7 +873,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     // done in IB: [self performSegueWithIdentifier:@"FontPicker" sender:self];
 }
 
--(void) updateFont: (NSString *) fontName atSize: (CGFloat) fontSize {
+- (void)updateFont:(NSString *)fontName atSize:(CGFloat)fontSize {
     if (!fontName) fontName = self.fontNameButton.titleLabel.text;
     if (fontSize <= 0) fontSize = (CGFloat)self.fontSizeField.text.floatValue;
     if (fontSize < 1.0) fontSize = 14.0;
@@ -969,7 +908,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     self.myGraph.formatStringForValues = [self checkUsersFormatString:sender];
     [self.myGraph reloadGraph];
 }
--(NSString *) checkUsersFormatString: (UITextField *) sender {
+- (NSString *)checkUsersFormatString:(UITextField *)sender {
     //there are many ways to crash this (more than one format), but this is most obvious
     NSString * newFormat = sender.text ?: @"";
     if ([newFormat containsString:@"%@"]) {
@@ -981,7 +920,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     return newFormat;
 }
 
--(IBAction) alphaTopFieldChanged:(UITextField *) sender {
+- (IBAction)alphaTopFieldChanged:(UITextField *)sender {
     float newAlpha = sender.floatValue;
     if (newAlpha >= 0 && newAlpha <= 1.0) {
         self.myGraph.alphaTop = newAlpha;
@@ -989,7 +928,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     }
 }
 
--(IBAction) alphaBottomFieldChanged:(UITextField *) sender {
+- (IBAction)alphaBottomFieldChanged:(UITextField *)sender {
     float newAlpha = sender.floatValue;
     if (newAlpha >= 0 && newAlpha <= 1.0) {
         self.myGraph.alphaBottom = newAlpha;
@@ -997,7 +936,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     }
 }
 
--(IBAction) alphaLineFieldChanged:(UITextField *) sender {
+- (IBAction)alphaLineFieldChanged:(UITextField *)sender {
     float newAlpha = sender.floatValue;
     if (newAlpha >= 0 && newAlpha <= 1.0) {
         self.myGraph.alphaLine = newAlpha;
@@ -1005,7 +944,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     }
 }
 
--(IBAction) alphaTouchInputFieldChanged:(UITextField *) sender {
+- (IBAction)alphaTouchInputFieldChanged:(UITextField *)sender {
     float newAlpha = sender.floatValue;
     if (newAlpha >= 0 && newAlpha <= 1.0) {
         self.myGraph.alphaTouchInputLine = newAlpha;
@@ -1013,7 +952,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     }
 }
 
--(IBAction) alphaBackgroundXaxisChanged:(UITextField *) sender {
+- (IBAction)alphaBackgroundXaxisChanged:(UITextField *)sender {
     float newAlpha = sender.floatValue;
     if (newAlpha >= 0 && newAlpha <= 1.0) {
         self.myGraph.alphaBackgroundXaxis = newAlpha;
@@ -1021,7 +960,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     }
 }
 
--(IBAction) alphaBackgroundYaxisChanged:(UITextField *) sender {
+- (IBAction)alphaBackgroundYaxisChanged:(UITextField *)sender {
     float newAlpha = sender.floatValue;
     if (newAlpha >= 0 && newAlpha <= 1.0) {
         self.myGraph.alphaBackgroundYaxis = newAlpha;
@@ -1030,7 +969,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 #pragma Color section
--(void) didChangeColor: (UIColor *) color {
+- (void)didChangeColor:(UIColor *)color {
     if (![color isEqual:self.currentColorChip.backgroundColor]) {
         self.currentColorChip.backgroundColor = color;
         [self.myGraph setValue: color forKey: self.currentColorKey];
@@ -1042,7 +981,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     [self didChangeColor:color];
 }
 
--(void) saveColor:(id) sender {
+- (void)saveColor:(id)sender {
     self.myGraph.animationGraphStyle = self.saveAnimationSetting;
     [self dismissViewControllerAnimated:YES completion:nil];
 }
@@ -1199,7 +1138,7 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
     return NO;
 }
 
--(void) tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:NO];
     if (self.splitViewController.isCollapsed) {
         [self performSegueWithIdentifier:@"showDetail" sender:self];
@@ -1208,12 +1147,28 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 
 #pragma mark TextDelegate
 
--(BOOL) textFieldShouldReturn:(UITextField *)textField {
+- (BOOL)textFieldShouldReturn:(UITextField *)textField {
     [textField resignFirstResponder];
     return YES;
 }
 
--(void) dealloc {
+#pragma mark Detail did change
+- (void)showDetailTargetDidChange:(id)sender {
+    if (self.splitViewController.isCollapsed) {
+        if (!self.navigationItem.rightBarButtonItem) {
+            UIBarButtonItem *graphBarButton = [[UIBarButtonItem alloc] initWithTitle:@"Graph" style:UIBarButtonItemStylePlain target:self action:@selector(showDetail:)];
+            self.navigationItem.rightBarButtonItem = graphBarButton;
+        }
+    } else {
+        self.navigationItem.rightBarButtonItem = nil;
+    }
+}
+
+-(void) showDetail:(id) sender {
+    [self performSegueWithIdentifier:@"showDetail" sender:self];
+}
+
+- (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self.detailViewController removeObserver:self forKeyPath:@"newestDate" ];
     [self.detailViewController removeObserver:self forKeyPath:@"numberOfPoints" ];

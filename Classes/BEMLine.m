@@ -48,30 +48,29 @@
     referenceFramePath.lineCapStyle = kCGLineCapButt;
     referenceFramePath.lineWidth = 0.7f;
 
-    if (self.enableReferenceFrame == YES) {
-        if (self.enableBottomReferenceFrameLine) {
-            // Bottom Line
-            [referenceFramePath moveToPoint:CGPointMake(0, self.frame.size.height-self.referenceLineWidth/4)];
-            [referenceFramePath addLineToPoint:CGPointMake(self.frame.size.width, self.frame.size.height-self.referenceLineWidth/4)];
-        }
+    CGFloat offset = self.referenceLineWidth/4; //moves framing ref line slightly into view
+    if (self.enableBottomReferenceFrameLine) {
+        // Bottom Line
+        [referenceFramePath moveToPoint:   CGPointMake(0,                              self.frame.size.height-offset)];
+        [referenceFramePath addLineToPoint:CGPointMake(self.frame.size.width,          self.frame.size.height-offset)];
+    }
 
-        if (self.enableLeftReferenceFrameLine) {
-            // Left Line
-            [referenceFramePath moveToPoint:CGPointMake(0+self.referenceLineWidth/4, self.frame.size.height)];
-            [referenceFramePath addLineToPoint:CGPointMake(0+self.referenceLineWidth/4, 0)];
-        }
+    if (self.enableLeftReferenceFrameLine) {
+        // Left Line
+        [referenceFramePath moveToPoint:   CGPointMake(0+offset,                       self.frame.size.height)];
+        [referenceFramePath addLineToPoint:CGPointMake(0+offset,                       0)];
+    }
 
-        if (self.enableTopReferenceFrameLine) {
-            // Top Line
-            [referenceFramePath moveToPoint:CGPointMake(0+self.referenceLineWidth/4, self.referenceLineWidth/4)];
-            [referenceFramePath addLineToPoint:CGPointMake(self.frame.size.width, self.referenceLineWidth/4)];
-        }
+    if (self.enableTopReferenceFrameLine) {
+        // Top Line
+        [referenceFramePath moveToPoint:   CGPointMake(0,                              offset)];
+        [referenceFramePath addLineToPoint:CGPointMake(self.frame.size.width,          offset)];
+    }
 
-        if (self.enableRightReferenceFrameLine) {
-            // Right Line
-            [referenceFramePath moveToPoint:CGPointMake(self.frame.size.width - self.referenceLineWidth/4, self.frame.size.height)];
-            [referenceFramePath addLineToPoint:CGPointMake(self.frame.size.width - self.referenceLineWidth/4, 0)];
-        }
+    if (self.enableRightReferenceFrameLine) {
+        // Right Line
+        [referenceFramePath moveToPoint:   CGPointMake(self.frame.size.width - offset, self.frame.size.height)];
+        [referenceFramePath addLineToPoint:CGPointMake(self.frame.size.width - offset, 0)];
     }
 
     if (self.enableReferenceLines == YES) {
@@ -309,7 +308,7 @@
     }
 }
 
-- (NSArray <NSValue *> *) areaArrayFromArray: (NSArray <NSValue *> *) array withEdgeAt:(CGFloat) edgeHeight  {
+- (NSArray <NSValue *> *)areaArrayFromArray:(NSArray <NSValue *> *)array withEdgeAt:(CGFloat)edgeHeight  {
     CGFloat halfHeight = self.frame.size.height/2;
     CGPoint midLeftPoint = CGPointMake(0, halfHeight);
     CGPoint midRightPoint = CGPointMake(self.frame.size.width,halfHeight);
@@ -328,11 +327,11 @@
     return areaPoints;
 }
 
-- (NSArray <NSValue *> *)topPointsFromArray: (NSArray <NSValue *> *) array {
+- (NSArray <NSValue *> *)topPointsFromArray:(NSArray <NSValue *> *)array {
     return [self areaArrayFromArray: array withEdgeAt:0];
 }
 
-- (NSArray <NSValue *> *)bottomPointsFromArray: (NSArray <NSValue *> *) array  {
+- (NSArray <NSValue *> *)bottomPointsFromArray:(NSArray <NSValue *> *)array  {
     return [self areaArrayFromArray: array withEdgeAt:self.frame.size.height];
 }
 

@@ -13,8 +13,8 @@
 
 @property (weak, nonatomic) IBOutlet BEMSimpleLineGraphView *myGraph;
 
-- (void) addPointToGraph;
-- (void) removePointFromGraph;
+- (void)addPointToGraph;
+- (void)removePointFromGraph;
 
 - (IBAction)refresh:(id)sender;
 

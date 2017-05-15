@@ -12,7 +12,7 @@
 
 
 
-- (UIColor *) colorForKey:(NSString *) colorKey {
+- (UIColor *)colorForKey:(NSString *)colorKey {
     UIColor * color = nil;
     NSData * colorData = [self dataForKey:colorKey];
     if (colorData) {
@@ -21,7 +21,7 @@
     return color;
 }
 
-- (void) setColor:(UIColor *) color forKey:(NSString *) colorKey {
+- (void)setColor:(UIColor *)color forKey:(NSString *)colorKey {
     NSData * colorData = nil;
     if (color) {
         colorData = [NSKeyedArchiver archivedDataWithRootObject:color];

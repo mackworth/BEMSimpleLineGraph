@@ -72,7 +72,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 /** Allows a higher-resolution snapshot of the graph while the app is in the foreground.
  @param size in pixels for your image.
  @return The snapshot of the graph as a UIImage object. */
-- (UIImage *)graphSnapshotImage: (CGSize) size NS_AVAILABLE_IOS(7_0);
+- (UIImage *)graphSnapshotImage:(CGSize)size NS_AVAILABLE_IOS(7_0);
 
 
 /** Takes a snapshot of the graph.
@@ -639,7 +639,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @param displayMinXValue The smallest datapoint that will be included in the chart (either index or value, depending on whether locationForPointAtIndex is implemented).
  @param displayMaxXValue The largest datapoint that will be included in the chart.
  @return YES if pan/zoom is ok; No if pan/zoom is prevented. */
--(BOOL) lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue;
+- (BOOL)lineGraph:(BEMSimpleLineGraphView *)graph shouldScaleFrom:(CGFloat)oldScale to:(CGFloat)newScale showingFromXMinValue:(CGFloat)displayMinXValue toXMaxValue:(CGFloat)displayMaxXValue;
 
 //----- Y AXIS -----//
 
@@ -663,17 +663,19 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 - (NSString *)yAxisSuffixOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
 
-/** Starting value to begin drawing Y-Axis labels  MUST ALSO IMPLEMENT incrementValueForYAxisOnLineGraph FOR THIS TO TAKE EFFECT
- @discussion This allows you to finally hone the granularity of the data label.  Instead of drawing values like 11.24,
+/** Starting value to begin drawing Y-Axis labels  
+ MUST ALSO IMPLEMENT incrementValueForYAxisOnLineGraph FOR THIS TO TAKE EFFECT
+ @discussion This allows you to finely hone the granularity of the data label.  Instead of drawing values like 11.24,
  you can lock these values to draw 11.20 to make it more user friendly.  When this is set, `numberOfYAxisLabelsOnLineGraph` is ignored.
  @param graph The graph object which is requesting the number of gaps between the labels.
  @return The base value to draw the first Y-Axis label */
 - (CGFloat)baseValueForYAxisOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
 
-/** Increment value to apply to the base Y-Axis label.  MUST ALSO IMPLEMENT baseValueForYAxisOnLineGraph FOR THIS TO TAKE EFFECT
+/** Increment value to apply to the base Y-Axis label.  
+ MUST ALSO IMPLEMENT baseValueForYAxisOnLineGraph FOR THIS TO TAKE EFFECT
  @discussion This value tells the graph the interval to be applied to the base Y-Axis value.  This allows you to increment the Y-Axis via user-friendly values rather than values
- like 37.17.  This let's you enforce that your Y-Axis have values rounded to whatever granularity best fits your data.
+ like 37.17.  This lets you enforce that your Y-Axis have values rounded to whatever granularity best fits your data.
  @param graph The graph object which is requesting the number of gaps between the labels.
  @return The increment value to add to the value returned from `baseValueForYAxisOnLineGraph` for future Y-Axis labels */
 - (CGFloat)incrementValueForYAxisOnLineGraph:(BEMSimpleLineGraphView *)graph;
