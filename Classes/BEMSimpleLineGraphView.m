@@ -619,7 +619,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
 
     CGFloat positionOnXAxis =  self.locations[index].CGPointValue.x;
-    if (positionOnXAxis < 0 ||  positionOnXAxis > self.dotsView.bounds.size.width ) {
+    if (positionOnXAxis < -self.sizePoint/2 ||  positionOnXAxis > self.dotsView.bounds.size.width + self.sizePoint/2 ) {
         //off screen so not visible
         [circleDot removeFromSuperview];
         return circleDot;
@@ -875,7 +875,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             CGFloat positionOnXAxis = allLabelLocations[index].CGPointValue.x ;
             CGFloat realValue = self.minXDisplayedValue + valueRangeWidth * positionOnXAxis/xAxisWidth;
             if (locationLabels) {
-                if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth) {
+                if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth +.01) {
                 //have to convert back to value from  viewLoc
                    //  CGFloat realValue = [self valueForDisplayPoint:positionOnXAxis];
                     xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForLocation:realValue];
@@ -895,7 +895,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:positionOnXAxis  reuseNumber: index];
             [newXAxisLabels addObject:labelXAxis];
 
-            if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth) {
+            if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth + .01) {
                 [self.backgroundXAxis addSubview:labelXAxis];
                 if (self.enableReferenceXAxisLines &&
                     (allLabelLocations[index].CGPointValue.y < BEMNullGraphValue || self.interpolateNullValues)) {
@@ -1282,9 +1282,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 - (UIImage *)graphSnapshotImage:(CGSize)size {
     CGRect testRect = CGRectMake(0, 0, size.height, size.width);
     CGRect savedRect = self.frame;
+    CGFloat savedAnimationTime = self.animationGraphEntranceTime;
+    self.animationGraphEntranceTime = 0.0;
     self.frame = testRect;
 
     UIImage * result =  [self graphSnapshotImageRenderedWhileInBackground:NO];
+    self.animationGraphEntranceTime = savedAnimationTime;
     self.frame = savedRect;
     return result;
 }

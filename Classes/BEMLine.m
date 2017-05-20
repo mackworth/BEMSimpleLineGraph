@@ -125,9 +125,20 @@
         CGFloat xValue = point.x;
         CGFloat yValue = point.y;
         if (xValue < 0) {
-            //only include two points to left of view to get curve correct
-            if (index+2 > self.points.count) continue;
-            if (self.points[index+2].CGPointValue.x < 0) continue;
+            //only need two points to left of view (negative x) to get curve correct
+            NSUInteger nextIndex = index+1;
+            NSUInteger numNegsRight = 0;
+            while (nextIndex < self.points.count && numNegsRight < 2) {
+                CGFloat xValue = self.points[nextIndex].CGPointValue.x;
+                if (xValue < 0) {
+                    numNegsRight ++;
+                } else if (xValue < BEMNullGraphValue) {
+                    //hit positive x's so
+                    break;
+                }
+                nextIndex++;
+            }
+            if (numNegsRight >= 2) continue; //don't need this point
         }
         if (xValue > rightEdge) {
             //only include twp points to right of view to get curve correct
@@ -136,26 +147,32 @@
         }
 
         if (yValue >= BEMNullGraphValue  && self.interpolateNullValues) {
-            //need to interpolate. For midpoints, just don't add a point
-            if (value == self.points[0]) {
-                //extrapolate a left edge point from next two actual values
-                NSUInteger firstPos = 1; //look for first real value
-                while (firstPos < numPoints && self.points[firstPos].CGPointValue.y >= BEMNullGraphValue) firstPos++;
-                if (firstPos >= numPoints) break;  // all NaNs?? =>don't create any line
-
-                CGFloat firstValue = self.points[firstPos].CGPointValue.y;
-                NSUInteger secondPos = firstPos+1; //look for second real value
-                while (secondPos < self.points.count && self.points[secondPos].CGPointValue.y >= BEMNullGraphValue) secondPos++;
-                if (secondPos >= numPoints) {
-                    // only one real number
-                    yValue = firstValue;
+            //need to linear interpolate. For midpoints, just don't add a point
+            if (drawPoints.count <= 1) {
+                //extrapolate a left edge point from two actual values, either next two or last one and next one
+                NSUInteger nextIndex = index+1;
+                NSValue * firstPoint = nil;
+                if (drawPoints.count == 0) {
+                    while (nextIndex < numPoints && self.points[nextIndex].CGPointValue.y >= BEMNullGraphValue) nextIndex++;
+                    if (nextIndex >= numPoints) break;  // all NaNs?? =>don't create any line
+                    firstPoint = self.points[nextIndex];
+                    nextIndex++; //look for second real value
                 } else {
-                    CGFloat delta = firstValue - self.points[secondPos].CGPointValue.y;
-                    yValue = firstValue + firstPos*delta/(secondPos-firstPos);
+                    firstPoint = drawPoints[0];
                 }
-
+                CGFloat firstXValue = firstPoint.CGPointValue.x;
+                CGFloat firstYValue = firstPoint.CGPointValue.y;
+                while (nextIndex < self.points.count && self.points[nextIndex].CGPointValue.y >= BEMNullGraphValue) nextIndex++;
+                if (nextIndex >= numPoints) {
+                    // only one real number
+                    yValue = firstYValue;
+                } else {
+                    CGFloat deltaY = firstYValue - self.points[nextIndex].CGPointValue.y;
+                    CGFloat deltaX = self.points[nextIndex].CGPointValue.x - firstXValue;
+                    yValue = firstYValue + (firstXValue-xValue)*deltaY/deltaX;
+                }
             } else if (value == self.points[numPoints-1]) {
-                //extrapolate a right edge poit from previous two actual values
+                //extrapolate a right edge point from previous two actual values
                 NSInteger firstPos = ((NSInteger)numPoints)-2; //look for first real value
                 while (firstPos >= 0 && self.points[(NSUInteger)firstPos].CGPointValue.y >= BEMNullGraphValue) firstPos--;
                 if (firstPos < 0 ) continue;  // all NaNs?? =>don't create any line; should already be gone
