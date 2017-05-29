@@ -188,6 +188,9 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 /// For information, this contains maximum value that can be displayed at current zoom/panned level.
 @property (nonatomic, readonly) CGFloat maxXDisplayedValue;
 
+/// Whether graphValuesForDataPoints returns all datapoints or just the currently displayed ones.  Default value is NO (all datapoints).
+@property (nonatomic, assign) BOOL adaptiveDataPoints;
+
 /// The way the graph is drawn, with or without bezier curved lines. Default value is NO.
 @property (nonatomic) IBInspectable BOOL enableBezierCurve;
 
@@ -434,15 +437,15 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 /** The string to display on the label on the X-axis at a given index.
  @discussion The number of strings to be returned should be equal to the number of points in the graph (returned in \p numberOfPointsInLineGraph). Otherwise, an exception may be thrown.
  @param graph The graph object which is requesting the label on the specified X-Axis position.
- @param index The index from left to right of a given label on the X-axis. Is the same index as the one for the points. The first value for the index is 0. */
+ @param index The index from left to right of a given label on the X-axis. Is the same index as the one for the points. The first value for the index is 0. Does NOT change due to pan/zoom movement. */
 - (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForIndex:(NSInteger)index;
 
 /** The string to display on the label on the X-axis at a given location.
  @discussion Use this instead of labelOnXAxisForIndex when you have implemented locationForPointAtIndex.
  @param graph The graph object which is requesting the label on the specified X-Axis position.
- @param location The location for a label in the same units/range as locationForPointAtIndex, although the requested location may be in between values returned from locationForPointAtIndex if numberOfXAxisLabelsOnLineGraph is implemented (as this provides evenly spaced labels despite possbly uneven data points).
- */
-- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location;
+ @param location The location for a label in the same units/range as locationForPointAtIndex, although the requested location may be in between values returned from locationForPointAtIndex if numberOfXAxisLabelsOnLineGraph is implemented (as this provides evenly spaced labels despite possibly uneven data points) or if incrementValuesForXAxisOnLineGraph is implemented
+ @param labelIndex The number of the label on the current view of the graph. For example, lets delegate distinguish between first label versus others. Not the same as index as locationForPointAtIndex and DOES change due to pan/zoom movement. */
+- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location atLabelIndex:(NSInteger)labelIndex;
 
 //------- Y AXIS -------//
 
@@ -622,7 +625,7 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
  @discussion This allows high customization over where X-Axis labels can be placed.  They can be placed in non-consistent intervals. Additionally,
  it allows you to draw the X-Axis labels based on traits of your data (eg. when the date corresponding to the data becomes a new day).
  When this is set, `numberOfGapsBetweenLabelsOnLineGraph` is ignored
- @param graph The graph object which is requesting the number of gaps between the labels.
+ @param graph The graph object which is requesting the indices for the labels.
  @return Array of graph indices to place X-Axis labels */
 - (NSArray <NSNumber *> *)incrementPositionsForXAxisOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
@@ -633,7 +636,6 @@ IB_DESIGNABLE @interface BEMSimpleLineGraphView : UIView <UIGestureRecognizerDel
 - (NSInteger)numberOfXAxisLabelsOnLineGraph:(BEMSimpleLineGraphView *)graph;
 
 /** Informs delegate of user request to zoom the chart and requests permission to proceed
- @discussion Calculates the total wdith of the graph and evenly spaces the labels based on the graph width. Only relevant if lineGraph:locationForPointAtIndex: is implemented. If implemented, it diverges labels from data points
  @param oldScale The current scale level. 1.0 = autosized to fit all points. 2.0 would show half the chart
  @param newScale New scale level requested by pinchZoom.
  @param displayMinXValue The smallest datapoint that will be included in the chart (either index or value, depending on whether locationForPointAtIndex is implemented).

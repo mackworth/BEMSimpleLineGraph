@@ -247,7 +247,7 @@ self.myGraph.property = [defaults   type ##ForKey:@#property]; \
         [self updateFont:labelFontName atSize:labelFontSize];
     }
 #define RestoreDetail(property, type) \
-if ([defaults type ##ForKey:@#property]) { \
+if ([defaults objectForKey:@#property]) { \
 self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
@@ -524,18 +524,24 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 - (IBAction)numberOfGapsBetweenLabelDidChange:(UITextField *)sender {
-    self.detailViewController.numberOfGapsBetweenLabels = sender.intValue;
-    [self.myGraph reloadGraph];
+    if (sender.intValue >= 0) {
+        self.detailViewController.numberOfGapsBetweenLabels = sender.intValue;
+        [self.myGraph reloadGraph];
+    }
 }
 
 - (IBAction)baseIndexForXAxisDidChange:(UITextField *)sender {
-    self.detailViewController.baseIndexForXAxis = sender.intValue;
-    [self.myGraph reloadGraph];
+    if (sender.intValue >= 0) {
+        self.detailViewController.baseIndexForXAxis = sender.intValue;
+        [self.myGraph reloadGraph];
+    }
 }
 
 - (IBAction)incrementIndexForXAxisDidChange:(UITextField *)sender {
-    self.detailViewController.incrementIndexForXAxis = sender.intValue;
-    [self.myGraph reloadGraph];
+    if (sender.intValue >= 0) {
+        self.detailViewController.incrementIndexForXAxis = sender.intValue;
+        [self.myGraph reloadGraph];
+    }
 }
 
 - (IBAction)enableArrayOfIndicesForXAxis:(UISwitch *)sender {
@@ -555,8 +561,10 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 - (IBAction)numberofXAxisDidChange:(UITextField *)sender {
-    self.detailViewController.numberofXAxisLabels = sender.intValue;
-    [self.myGraph reloadGraph];
+    if (sender.intValue >= 0) {
+        self.detailViewController.numberofXAxisLabels = sender.intValue;
+        [self.myGraph reloadGraph];
+    }
 }
 
 - (IBAction)minXValueDidChange:(UITextField *)sender {
@@ -623,8 +631,10 @@ self.detailViewController.property = [defaults   type ##ForKey:@#property]; \
 }
 
 - (IBAction)numberofYAxisDidChange:(UITextField *)sender {
-    self.detailViewController.numberOfYAxisLabels = sender.intValue;
-    [self.myGraph reloadGraph];
+    if (sender.intValue >= 0) {
+        self.detailViewController.numberOfYAxisLabels = sender.intValue;
+        [self.myGraph reloadGraph];
+    }
 }
 
 - (IBAction)yAxisPrefixDidChange:(UITextField *)sender {

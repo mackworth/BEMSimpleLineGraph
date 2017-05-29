@@ -63,6 +63,7 @@
     self.dateFormatter =   [[NSDateFormatter alloc] init]; self.dateFormatter.dateFormat = @"M/d/yy";
     //    self.dateFormatter =  self.dateFormatterYears;
     self.variableXAxis = NO;
+    self.myGraph.adaptiveDataPoints = YES;
     _percentNulls = .2;
 
     // Do any additional setup after loading the view.
@@ -318,7 +319,7 @@ float randomProbability () {
     return [label stringByReplacingOccurrencesOfString:@" " withString:@"\n"];
 }
 
-- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location {
+- (nullable NSString *)lineGraph:(nonnull BEMSimpleLineGraphView *)graph labelOnXAxisForLocation:(CGFloat)location atLabelIndex:(NSInteger)labelIndex{
     NSDate *date = [NSDate dateWithTimeIntervalSinceReferenceDate:location];
     NSString *label = [self.dateFormatter stringFromDate:date];
     return [label stringByAppendingString:@"  " ];

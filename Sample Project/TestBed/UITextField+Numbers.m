@@ -14,18 +14,16 @@
     if (num < 0.0) {
         self.text = @"";
     } else if (num >= NSNotFound ) {
-        self.text = @"oopsf";
+        self.text = @"oops";
     } else {
         self.text = [NSString stringWithFormat:@"%0.1f",num];
     }
 }
 
 - (void)setIntValue:(NSInteger) num {
-    if (num == NSNotFound ) {
+    if (num == NSNotFound || num == -1 ) {
         self.text = @"";
-    } else if (num == (NSInteger)-1 ) {
-        self.text = @"oops";
-    }else {
+    } else {
         self.text = [NSString stringWithFormat:@"%d",(int)num];
     }
 }
@@ -40,7 +38,7 @@
 
 - (NSInteger)intValue {
     if (self.text.length ==0) {
-        return NSNotFound;
+        return -1;
     } else {
         return self.text.integerValue;
     }

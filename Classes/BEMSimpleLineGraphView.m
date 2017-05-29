@@ -105,7 +105,7 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 @property (nonatomic) CGFloat doubleTapScale;
 @property (nonatomic) CGFloat doubleTapPanMovement;
 
-#pragma mark Calculated min/max properties; set by getData
+#pragma mark Calculated min/max properties; set by getData and Zoom
 
 /// The biggest value out of all of the data points
 @property (nonatomic) CGFloat maxYValue;
@@ -195,6 +195,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     RestoreProperty (enableLeftReferenceAxisFrameLine, Bool);
     RestoreProperty (enableBottomReferenceAxisFrameLine, Bool);
     RestoreProperty (interpolateNullValues, Bool);
+    RestoreProperty (adaptiveDataPoints, Bool);
     RestoreProperty (displayDotsOnly, Bool);
     RestoreProperty (displayDotsWhileAnimating, Bool);
 
@@ -260,6 +261,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     EncodeProperty (enableTopReferenceAxisFrameLine, Bool);
     EncodeProperty (enableRightReferenceAxisFrameLine, Bool);
     EncodeProperty (interpolateNullValues, Bool);
+    EncodeProperty (adaptiveDataPoints, Bool);
     EncodeProperty (displayDotsOnly, Bool);
     EncodeProperty (displayDotsWhileAnimating, Bool);
 
@@ -319,6 +321,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     _formatStringForValues = @"%.0f";
     _interpolateNullValues = YES;
     _displayDotsOnly = NO;
+    _adaptiveDataPoints = NO;
     _enableUserScaling = NO;
     _zoomScale = 1.0;
     _panMovement = 0;
@@ -440,7 +443,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             _zoomScale = 1.0;
             self.zoomGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handleZoomGestureAction:)];
             self.zoomGesture.delegate = self;
-            [self.labelsView addGestureRecognizer:self.zoomGesture];
+            [self addGestureRecognizer:self.zoomGesture];
 
             self.doubleTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapGestureAction:)];
             self.doubleTapGesture.delegate = self;
@@ -450,21 +453,26 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             self.zoomPanGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanGestureAction:)];
             self.zoomPanGesture.delegate = self;
             self.zoomPanGesture.minimumNumberOfTouches = 2;
-            [self.labelsView addGestureRecognizer:self.zoomPanGesture];
+            [self addGestureRecognizer:self.zoomPanGesture];
 
         }
     } else {
         _zoomScale = 1.0;
-        if (self.zoomGesture) {
-            self.zoomGesture.delegate = nil;
-            [self.labelsView removeGestureRecognizer:self.zoomGesture];
-            self.zoomGesture = nil;
-            [self drawEntireGraph];  // was on, now off, so need to redraw
+        if (self.zoomPanGesture) {
+            self.zoomPanGesture.delegate = nil;
+            [self removeGestureRecognizer:self.zoomPanGesture];
+            self.zoomPanGesture = nil;
         }
         if (self.doubleTapGesture) {
             self.doubleTapGesture.delegate = nil;
             [self.labelsView removeGestureRecognizer:self.doubleTapGesture];
             self.doubleTapGesture = nil;
+        }
+        if (self.zoomGesture) {
+            self.zoomGesture.delegate = nil;
+            [self removeGestureRecognizer:self.zoomGesture];
+            self.zoomGesture = nil;
+            [self drawEntireGraph];  // was on, now off, so need to redraw
         }
     }
 }
@@ -744,7 +752,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (self.enableReferenceXAxisLines || self.enableReferenceYAxisLines) {
         line.enableReferenceLines = YES;
         line.referenceLineColor = self.colorReferenceLines;
-        //Note that arrayOfVerticalReferenceLinePioints (and horizontal) must be set already by drawYaxis and drawXAxis
+        //Note that arrayOfVerticalReferenceLinePoints (and horizontal) must be set already by drawYaxis and drawXAxis
     } else {
         line.enableReferenceLines = NO;
     }
@@ -779,7 +787,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         return;
     }
     if (!([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)] ||
-          [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)])) return;
+          [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:atLabelIndex:)])) return;
 
     // Draw X-Axis Background Area
 
@@ -812,6 +820,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             }
         } else {
             CGFloat indicesDisplayed = self.maxXDisplayedValue - self.minXDisplayedValue;
+            numberLabels = MIN(numberLabels, indicesDisplayed+1);
             CGFloat step = indicesDisplayed / (numberLabels-1);
             CGFloat currIndex = (CGFloat)ceil(self.minXDisplayedValue);
             for (NSInteger i = 0; i < numberLabels; i++) {
@@ -864,7 +873,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     @autoreleasepool {
         BOOL usingLocation = [self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex: )];
-        BOOL locationLabels = usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)];
+        BOOL locationLabels = usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:atLabelIndex:)];
         BOOL indexLabels =   !usingLocation && [self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)];
         CGFloat valueRangeWidth = (self.maxXValue - self.minXValue) / self.zoomScale;
 
@@ -875,17 +884,17 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             CGFloat positionOnXAxis = allLabelLocations[index].CGPointValue.x ;
             CGFloat realValue = self.minXDisplayedValue + valueRangeWidth * positionOnXAxis/xAxisWidth;
             if (locationLabels) {
-                if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth +.01) {
+                if (positionOnXAxis >= -0.01  && positionOnXAxis <= xAxisWidth +.01) {
                 //have to convert back to value from  viewLoc
                    //  CGFloat realValue = [self valueForDisplayPoint:positionOnXAxis];
-                    xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForLocation:realValue];
+                    xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForLocation:realValue atLabelIndex:(NSInteger)index] ?: @"";
                 }
             } else {
                 NSInteger realIndex = (NSInteger)(round(realValue));
                 if (realIndex < 0) realIndex = 0;
                 if (realIndex >= self.numberOfPoints) realIndex = self.numberOfPoints - 1;
                 if (indexLabels) {
-                    xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForIndex:realIndex ];
+                    xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForIndex:realIndex ] ?: @"";
                 } else {
                     xAxisLabelText = [NSString stringWithFormat:@"%lu", (long)realIndex];
                 }
@@ -895,7 +904,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             UILabel *labelXAxis = [self xAxisLabelWithText:xAxisLabelText atLocation:positionOnXAxis  reuseNumber: index];
             [newXAxisLabels addObject:labelXAxis];
 
-            if (positionOnXAxis >= 0  && positionOnXAxis <= xAxisWidth + .01) {
+            if (positionOnXAxis >= -0.01  && positionOnXAxis <= xAxisWidth + .01) {
                 [self.backgroundXAxis addSubview:labelXAxis];
                 if (self.enableReferenceXAxisLines &&
                     (allLabelLocations[index].CGPointValue.y < BEMNullGraphValue || self.interpolateNullValues)) {
@@ -924,23 +933,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     };
 }
 
-- (NSString *)xAxisTextForIndex:(NSInteger)index {
-    NSString *xAxisLabelText = @"";
-
-    if ([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForIndex:)]) {
-        xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForIndex:index];
-    }
-    return xAxisLabelText;
-}
-
-- (NSString *)xAxisTextForLocation:(CGFloat)location {
-    NSString *xAxisLabelText = @"";
-    if ([self.dataSource respondsToSelector:@selector(lineGraph:labelOnXAxisForLocation:)]) {
-        xAxisLabelText = [self.dataSource lineGraph:self labelOnXAxisForLocation:location];
-    }
-    return xAxisLabelText;
-}
-
 - (UILabel *)xAxisLabelWithText:(NSString *)text atLocation:(CGFloat)positionOnXAxis reuseNumber:(NSUInteger)xAxisLabelNumber{
     UILabel *labelXAxis;
     if (xAxisLabelNumber < self.xAxisLabels.count) {
@@ -951,7 +943,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     labelXAxis.text = text;
     labelXAxis.font = self.labelFont;
-    labelXAxis.textAlignment = 1;
+    labelXAxis.textAlignment = NSTextAlignmentCenter;
     labelXAxis.textColor = self.colorXaxisLabel;
     labelXAxis.backgroundColor = [UIColor clearColor];
 
@@ -961,10 +953,15 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     CGFloat halfWidth = lRect.size.width/2;
 
     //if labels are partially on screen, nudge onto screen
-    if (positionOnXAxis + halfWidth >= 0) positionOnXAxis = MAX(positionOnXAxis, halfWidth);
-    CGFloat rightEdge = CGRectGetMaxX(self.backgroundXAxis.bounds) ;
-    if (positionOnXAxis - halfWidth <= rightEdge) {
-            positionOnXAxis = MIN(positionOnXAxis, rightEdge - halfWidth-.1f);
+    if (positionOnXAxis + halfWidth >= 0 &&  positionOnXAxis <= halfWidth) {
+        positionOnXAxis = halfWidth;
+        labelXAxis.textAlignment = NSTextAlignmentLeft;
+    } else {
+        CGFloat rightEdge = CGRectGetMaxX(self.backgroundXAxis.bounds) ;
+        if (positionOnXAxis - halfWidth <= rightEdge && positionOnXAxis > rightEdge - halfWidth-.01f) {
+            positionOnXAxis = rightEdge - halfWidth-.01f;
+            labelXAxis.textAlignment = NSTextAlignmentRight;
+        }
     }
     labelXAxis.frame = lRect;
     labelXAxis.center = CGPointMake(positionOnXAxis, CGRectGetMidY(self.backgroundXAxis.bounds));
@@ -991,7 +988,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 - (UILabel *)yAxisLabelWithText:(NSString *)text atValue:(CGFloat)value reuseNumber:(NSInteger)reuseNumber {
     //provide a Y-Axis Label with text at Value, reusing reuseNumber'd label if it exists
     //special case: use self.Averageline.label if reuseNumber = NSIntegerMax
-    CGFloat labelHeight = self.labelFont.pointSize + 7.0f;
+    CGFloat labelHeight = self.labelFont.lineHeight + 2.0f;
     CGFloat backgroundWidth = self.backgroundYAxis.bounds.size.width - 1.0f;
     CGRect frameForLabelYAxis = CGRectMake(1.0f, 0.0f, backgroundWidth, labelHeight);
 
@@ -1322,8 +1319,17 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
 - (NSArray <NSNumber *> *)graphValuesForDataPoints {
     NSMutableArray * points = [NSMutableArray arrayWithCapacity:self.dataPoints.count];
-    for (NSValue * point in self.dataPoints) {
-        [points addObject:@(point.CGPointValue.y)];
+    if (self.adaptiveDataPoints) {
+        for (NSValue * point in self.dataPoints) {
+            CGPoint pointValue = point.CGPointValue;
+            if (pointValue.x < self.minXDisplayedValue) continue;
+            if (pointValue.x > self.maxXDisplayedValue) break;
+            [points addObject:@(pointValue.y)];
+        }
+    } else {
+        for (NSValue * point in self.dataPoints) {
+            [points addObject:@(point.CGPointValue.y)];
+        }
     }
     return [points copy];
 }
@@ -1350,6 +1356,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     CGFloat xAxisWidth = CGRectGetMaxX(self.labelsView.bounds);
     CGFloat valueRangeWidth = (self.maxXValue - self.minXValue) / self.zoomScale;
     return self.minXDisplayedValue + valueRangeWidth * location/xAxisWidth;
+}
+
+- (CGFloat)xLocationForValue:(NSNumber *) value {
+    CGFloat xAxisWidth = CGRectGetMaxX(self.labelsView.bounds);
+    CGFloat valueRangeWidth = (self.maxXValue - self.minXValue) / self.zoomScale;
+    return (value.doubleValue-self.minXDisplayedValue)/valueRangeWidth * xAxisWidth;
 }
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
@@ -1628,7 +1640,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 - (NSArray <NSValue *> *)getData {
     // Remove all data points before adding them to the array
     NSMutableArray <NSValue *> * newDataPoints = [NSMutableArray arrayWithCapacity:(NSUInteger)self.numberOfPoints];
-
+    CGFloat lastXValue = -INFINITY;
     for (NSInteger index = 0; index < self.numberOfPoints; index++) {
         CGFloat dotValue = 0;
 
@@ -1645,6 +1657,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         CGFloat xValue = index;
         if ([self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]){
             xValue = [self.dataSource  lineGraph:self locationForPointAtIndex:index];
+            if (xValue <= lastXValue) {
+                NSLog(@"Warning: X Values must increase across graph; at index %ld: %0.2f < %0.2f", (long)index, xValue, lastXValue);
+            }
+            lastXValue = xValue;
         }
         [newDataPoints addObject:[NSValue valueWithCGPoint:CGPointMake(xValue, dotValue)]];
 
@@ -1661,7 +1677,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (self.maxYValue < self.minYValue) self.maxYValue = self.minYValue;
     if (self.maxXValue < self.minXValue) self.maxXValue = self.minXValue;
 
-    if (self.zoomScale <= 1.0 || isnan(self.minXDisplayedValue )) {
+    if (self.zoomScale <= 1.0 ||
+        isnan(self.minXDisplayedValue)  ||
+        (self.minXDisplayedValue > self.maxXDisplayedValue) ||
+        ((self.minXDisplayedValue > self.numberOfPoints || self.minXDisplayedValue > self.numberOfPoints)
+          && ![self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]))
+              {
         _zoomScale = 1.0;
         _minXDisplayedValue = self.minXValue;
         _maxXDisplayedValue = self.maxXValue;
