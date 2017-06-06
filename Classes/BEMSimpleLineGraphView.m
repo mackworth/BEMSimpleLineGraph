@@ -99,11 +99,13 @@ typedef NS_ENUM(NSInteger, BEMInternalTags)
 @property (nonatomic) CGFloat zoomCenterLocation;
 @property (nonatomic) CGFloat zoomCenterValue;
 
+//maximum amount user is allowed to zoom in
+@property (nonatomic, assign) CGFloat maxZoom;
+
 //used to restore zoom
 @property (strong, nonatomic) UITapGestureRecognizer *doubleTapGesture;
 // set by doubleTap to remember previous scale
 @property (nonatomic) CGFloat doubleTapScale;
-@property (nonatomic) CGFloat doubleTapPanMovement;
 
 #pragma mark Calculated min/max properties; set by getData and Zoom
 
@@ -327,7 +329,6 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     _panMovement = 0;
     _panMovementBase = 0;
     _doubleTapScale = 1.0;
-    _doubleTapPanMovement = 0;
     _zoomCenterLocation = 0;
     _zoomCenterValue = 0;
 
@@ -530,7 +531,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     CGRect frameForBackgroundYAxis = CGRectZero;
     if (self.enableYAxisLabel) {
-        CGFloat yAxisWidth = [self calculateWidestLabel] + 2.0f;
+        CGFloat yAxisWidth = [self calculateWidestLabel] + 6.0f;
         CGRectEdge edge = self.positionYAxisRight ? CGRectMaxXEdge : CGRectMinXEdge;
         CGRectDivide(self.bounds, &frameForBackgroundYAxis, &frameForRest, yAxisWidth, edge);
     }
@@ -569,7 +570,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     // Draw the Y-Axis
     [self drawYAxis];
 
-   // Draw the X-Axis
+    // Draw the X-Axis
     [self drawXAxis];
 
     // Draw line with bottom and top fill
@@ -581,14 +582,15 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 }
 
 - (CGFloat)labelWidthForValue:(CGFloat)value {
-    NSDictionary *attributes = @{NSFontAttributeName: self.labelFont};
+    UIFont * labelFont = self.labelFont;
+    if (!labelFont) return 0;
+    NSDictionary *attributes = @{NSFontAttributeName: labelFont};
     NSString *valueString = [self yAxisTextForValue:value];
     NSString *labelString = [valueString stringByReplacingOccurrencesOfString:@"[0-9-]" withString:@"N" options:NSRegularExpressionSearch range:NSMakeRange(0, [valueString length])];
     return [labelString sizeWithAttributes:attributes].width;
 }
 
 - (CGFloat)calculateWidestLabel {
-    NSDictionary *attributes = @{NSFontAttributeName: self.labelFont};
     CGFloat widestNumber;
     if (self.autoScaleYAxis == YES){
         widestNumber = MAX([self labelWidthForValue:self.maxYValue],
@@ -597,6 +599,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         widestNumber  = [self labelWidthForValue:CGRectGetMaxY(self.backgroundYAxis.bounds)] ;
     }
     if (self.averageLine.enableAverageLine) {
+        UIFont * labelFont = self.labelFont;
+        if (!labelFont) return 0;
+        NSDictionary *attributes = @{NSFontAttributeName: labelFont};
         return MAX(widestNumber,    [self.averageLine.title sizeWithAttributes:attributes].width);
     } else {
         return widestNumber;
@@ -663,7 +668,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                 if ((self.alwaysDisplayPopUpLabels == YES)  &&
                     (![self.delegate respondsToSelector:@selector(lineGraph:alwaysDisplayPopUpAtIndex:)] ||
                       [self.delegate lineGraph:self alwaysDisplayPopUpAtIndex:(NSInteger)index])) {
-                        label = [self configureLabel:label forPoint: circleDot avoiding: newPopups ];
+                    label = [self configureLabel:label forPoint: circleDot avoiding: newPopups ];
 
                 } else {
                     //not showing labels this time, so remove if any
@@ -678,7 +683,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                     if (displayDots) {
                         circleDot.alpha = 1.0f;
                     }
-                   if (label) label.alpha = 1.0f;
+                    if (label) label.alpha = 1.0f;
                 } else if (!_displayDotsWhileAnimating && displayDots) {
                     //turn all dots/labels on after main animation.
                     [UIView animateWithDuration:0.3
@@ -713,7 +718,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
                 [label removeFromSuperview];
             }
             [newPopups addObject:label ];
-       }
+        }
         for (NSUInteger i = numPoints; i < self.circleDots.count;  i++) {
             [self.permanentPopups[i] removeFromSuperview]; //no harm if not showing
             [self.circleDots [i] removeFromSuperview];
@@ -820,7 +825,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             }
         } else {
             CGFloat indicesDisplayed = self.maxXDisplayedValue - self.minXDisplayedValue;
-            numberLabels = MIN(numberLabels, indicesDisplayed+1);
+            numberLabels = MIN(numberLabels, (NSInteger)indicesDisplayed+1);
             CGFloat step = indicesDisplayed / (numberLabels-1);
             CGFloat currIndex = (CGFloat)ceil(self.minXDisplayedValue);
             for (NSInteger i = 0; i < numberLabels; i++) {
@@ -955,12 +960,10 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     //if labels are partially on screen, nudge onto screen
     if (positionOnXAxis + halfWidth >= 0 &&  positionOnXAxis <= halfWidth) {
         positionOnXAxis = halfWidth;
-        labelXAxis.textAlignment = NSTextAlignmentLeft;
     } else {
         CGFloat rightEdge = CGRectGetMaxX(self.backgroundXAxis.bounds) ;
         if (positionOnXAxis - halfWidth <= rightEdge && positionOnXAxis > rightEdge - halfWidth-.01f) {
             positionOnXAxis = rightEdge - halfWidth-.01f;
-            labelXAxis.textAlignment = NSTextAlignmentRight;
         }
     }
     labelXAxis.frame = lRect;
@@ -1120,8 +1123,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (self.averageLine.enableAverageLine && self.averageLine.title.length > 0 && self.numberOfPoints > 1) {
         self.averageLine.yValue = self.getAverageValue;
         averageLabel = [self yAxisLabelWithText:self.averageLine.title
-                                                 atValue:self.averageLine.yValue
-                                             reuseNumber:NSIntegerMax];
+                                        atValue:self.averageLine.yValue
+                                    reuseNumber:NSIntegerMax];
 
         [self.backgroundYAxis addSubview:averageLabel];
     } else {
@@ -1136,7 +1139,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             (CGRectIsNull(CGRectIntersection(prevLabel.frame,              label.frame)) &&
              (!averageLabel ||
               CGRectIsNull(CGRectIntersection(averageLabel.frame,          label.frame))) &&
-             CGRectContainsRect(self.backgroundYAxis.bounds,               label.frame))) {
+              CGRectContainsRect(self.backgroundYAxis.bounds,               label.frame))) {
             prevLabel = label;  //no overlap and inside frame, so show this one
         } else {
             [label removeFromSuperview];  // Overlapped
@@ -1196,7 +1199,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 
     if ( [self adjustYLocForLabel:newPopUpLabel
                           atIndex:index
-                       avoidingDot:circleDot.frame
+                      avoidingDot:circleDot.frame
                         andLabels: previousLabels] ) {
         [self.labelsView addSubview:newPopUpLabel];
     } else {
@@ -1378,9 +1381,8 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         self.doubleTapScale = 1.0;
         self.zoomCenterLocation = xLoc;
         self.zoomCenterValue = [self xValueForLocation:xLoc];
-       return YES;
+        return YES;
     } else if ([gestureRecognizer isEqual:self.zoomPanGesture]) {
-       self.doubleTapPanMovement = 0;
         self.panMovementBase = xLoc;
         return YES;
     } else {
@@ -1445,9 +1447,9 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     if (newScale <= 1.0) {
         newScale = 1.0;
         newPanMovement = 0;
-    } else if (newScale > self.numberOfPoints/2) {
+    } else if (newScale > self.maxZoom) {
         //don't allow scaling beyond showing less than 2 points (on average)
-        newScale = self.numberOfPoints/2;
+        newScale = self.maxZoom;
     }
     //assumes we're zooming around fixed point self.zoomCenterValue which is currently displayed at self.zoomCenterLocation
     //Now with newScale and newPanMovement,
@@ -1457,7 +1459,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     //4) finally ask permission for new panZoom and update geometry globals
     CGFloat xAxisWidth =  CGRectGetMaxX(self.labelsView.bounds);
     CGFloat totalValueRangeWidth = self.maxXValue - self.minXValue;
-    if (xAxisWidth <= 0 || totalValueRangeWidth <= 0) return NO; 
+    if (xAxisWidth <= 0 || totalValueRangeWidth <= 0) return NO;
 
     CGFloat newValueRangeWidth = (totalValueRangeWidth) / newScale;
     CGFloat displayRatio = xAxisWidth/newValueRangeWidth;
@@ -1514,28 +1516,16 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
 - (void)handleDoubleTapGestureAction:(UITapGestureRecognizer *)recognizer {
 
     if (self.zoomScale < 1.01) {
-        if (![self.delegate respondsToSelector:@selector(lineGraph:shouldScaleFrom:to:showingFromXMinValue:toXMaxValue:)] ||
-            [self.delegate   lineGraph: self
-                       shouldScaleFrom: self.zoomScale
-                                    to: self.doubleTapScale
-                  showingFromXMinValue: self.minXDisplayedValue
-                           toXMaxValue: self.maxXDisplayedValue]) {
-            _zoomScale = self.doubleTapScale;
-            _panMovement = self.doubleTapPanMovement ;
+        self.zoomCenterLocation = [recognizer locationInView:self].x;
+        self.zoomCenterValue = [self xValueForLocation:self.zoomCenterLocation];
+        if ([self handleZoom:self.doubleTapScale orMovement:0 checkDelegate:YES]) {
             self.doubleTapScale = 1.0;
-            }
+        }
     } else {
-        if (![self.delegate respondsToSelector:@selector(lineGraph:shouldScaleFrom:to:showingFromXMinValue:toXMaxValue:)] ||
-            [self.delegate   lineGraph: self
-                       shouldScaleFrom: self.zoomScale
-                                    to: 1.0
-                  showingFromXMinValue: self.minXValue
-                           toXMaxValue: self.maxXValue]) {
-            self.doubleTapPanMovement = self.panMovement;
-            self.doubleTapScale = self.zoomScale;
-            _panMovement = 0;
-            _zoomScale = 1.0;
-            }
+        CGFloat oldZoom = self.zoomScale;
+        if ([self handleZoom:1.0 orMovement:0 checkDelegate:YES]) {
+            self.doubleTapScale = oldZoom;
+        }
     }
     [self reloadGraph];
 }
@@ -1551,16 +1541,12 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     self.touchInputLine.alpha = self.alphaTouchInputLine;
 
     BEMCircle *closestDot = [self closestDotFromTouchInputLine:self.touchInputLine];
-    NSInteger index = 0;
-    if (closestDot.tag > DotFirstTag100) {
-        index = closestDot.tag - DotFirstTag100;
-    } else {
-        if (self.numberOfPoints == 0) return; //something's very wrong
-    }
+    NSInteger index = closestDot.tag - DotFirstTag100;
     closestDot.alpha = 0.8f;
 
     if (recognizer.state != UIGestureRecognizerStateEnded) {
         //ON START OR MOVE
+        if (index < 0) return; //something's very wrong
         if (self.enablePopUpReport == YES  && self.alwaysDisplayPopUpLabels == NO) {
             if ([self.delegate respondsToSelector:@selector(popUpViewForLineGraph:)] ) {
                 UIView * newCustom = [self.delegate popUpViewForLineGraph:self];
@@ -1600,7 +1586,7 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
         }
     } else {
         // ON RELEASE
-        if (self.enableTouchReport && [self.delegate respondsToSelector:@selector(lineGraph:didReleaseTouchFromGraphWithClosestIndex:)]) {
+        if (index >= 0 && self.enableTouchReport && [self.delegate respondsToSelector:@selector(lineGraph:didReleaseTouchFromGraphWithClosestIndex:)]) {
             [self.delegate lineGraph:self didReleaseTouchFromGraphWithClosestIndex:index];
         }
 
@@ -1644,16 +1630,16 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     for (NSInteger index = 0; index < self.numberOfPoints; index++) {
         CGFloat dotValue = 0;
 
-    #ifndef TARGET_INTERFACE_BUILDER
-        if ([self.dataSource respondsToSelector:@selector(lineGraph:valueForPointAtIndex:)]) {
-            dotValue = [self.dataSource lineGraph:self valueForPointAtIndex:index];
+#ifndef TARGET_INTERFACE_BUILDER
+    if ([self.dataSource respondsToSelector:@selector(lineGraph:valueForPointAtIndex:)]) {
+        dotValue = [self.dataSource lineGraph:self valueForPointAtIndex:index];
 
-        } else {
-            [NSException raise:@"lineGraph:valueForPointAtIndex: protocol method is not implemented in the data source. Throwing exception here before the system throws a CALayerInvalidGeometry Exception." format:@"Value for point %f at index %lu is invalid. CALayer position may contain NaN: [0 nan]", dotValue, (unsigned long)index];
-        }
-    #else
+    } else {
+        [NSException raise:@"lineGraph:valueForPointAtIndex: protocol method is not implemented in the data source. Throwing exception here before the system throws a CALayerInvalidGeometry Exception." format:@"Value for point %f at index %lu is invalid. CALayer position may contain NaN: [0 nan]", dotValue, (unsigned long)index];
+    }
+#else
         dotValue = (int)(arc4random() % 10000);
-    #endif
+#endif
         CGFloat xValue = index;
         if ([self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]){
             xValue = [self.dataSource  lineGraph:self locationForPointAtIndex:index];
@@ -1663,26 +1649,39 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
             lastXValue = xValue;
         }
         [newDataPoints addObject:[NSValue valueWithCGPoint:CGPointMake(xValue, dotValue)]];
-
     }
     return [newDataPoints copy];
 }
 
 - (void)calculateMinMax {
 #ifndef TARGET_INTERFACE_BUILDER
+    BOOL usingIndex = ![self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)];
+
     self.maxYValue = [self getMaximumYValue]; if (self.maxYValue <= -FLT_MAX) self.maxYValue = 0;
     self.minYValue = [self getMinimumYValue]; if (self.minYValue >= INFINITY) self.minYValue = 0;
-    self.maxXValue = [self getMaximumXValue]; if (self.maxXValue <= -FLT_MAX) self.maxXValue = 0;
-    self.minXValue = [self getMinimumXValue]; if (self.minXValue >= INFINITY) self.minXValue = 0;
-    if (self.maxYValue < self.minYValue) self.maxYValue = self.minYValue;
-    if (self.maxXValue < self.minXValue) self.maxXValue = self.minXValue;
-
-    if (self.zoomScale <= 1.0 ||
+    if (usingIndex) {
+        self.minXValue = 0;
+        self.maxXValue = self.numberOfPoints-1;
+        self.maxZoom = self.numberOfPoints/2;
+        //don't allow scaling beyond showing less than 2 points
+    } else {
+        self.maxXValue = [self getMaximumXValue]; if (self.maxXValue <= -FLT_MAX) self.maxXValue = 0;
+        self.minXValue = [self getMinimumXValue]; if (self.minXValue >= INFINITY) self.minXValue = 0;
+        if (self.maxYValue < self.minYValue) self.maxYValue = self.minYValue;
+        if (self.maxXValue < self.minXValue) self.maxXValue = self.minXValue;
+        CGFloat minInterval = [self getMinimumInterval];
+        CGFloat valueRange = self.maxXValue - self.minXValue;
+        if (valueRange > 0 && minInterval > 0) {
+            self.maxZoom = valueRange/(minInterval*10);  //allow smallest gap between points to be zoom
+        } else {
+            self.maxZoom = self.numberOfPoints/2;
+        }
+    }
+    if ((self.zoomScale <= 1.0) ||
         isnan(self.minXDisplayedValue)  ||
         (self.minXDisplayedValue > self.maxXDisplayedValue) ||
-        ((self.minXDisplayedValue > self.numberOfPoints || self.minXDisplayedValue > self.numberOfPoints)
-          && ![self.dataSource respondsToSelector:@selector(lineGraph:locationForPointAtIndex:)]))
-              {
+        (self.minXDisplayedValue < self.minXValue || self.maxXDisplayedValue > self.maxXValue) ||
+        (usingIndex && (self.maxXDisplayedValue > self.numberOfPoints ))) {
         _zoomScale = 1.0;
         _minXDisplayedValue = self.minXValue;
         _maxXDisplayedValue = self.maxXValue;
@@ -1693,12 +1692,11 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     self.maxYValue = 10000.0f;
     self.minXValue = 0;
     self.maxXValue = self.numberOfPoints-1;
+    _zoomScale = 1.0;
+    _minXDisplayedValue = self.minXValue;
+    _maxXDisplayedValue = self.maxXValue;
+    _panMovement = 0;
 #endif
-
-    if (self.minXDisplayedValue < self.minXValue || self.minXDisplayedValue > self.maxXValue) {
-        //possibly caller changed all our data out from under us...
-        self.minXDisplayedValue = self.minXValue;
-    }
 }
 
 - (NSArray <NSValue *> *)layoutPoints {
@@ -1778,6 +1776,18 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     }
 }
 
+-(CGFloat) getMinimumInterval {
+    CGFloat minInterval = INFINITY;
+    CGFloat lastValue = -INFINITY;
+    for (NSValue * value in self.dataPoints) {
+        CGFloat dotValue = value.CGPointValue.x;
+        if (dotValue >= BEMNullGraphValue) continue;
+        if (dotValue - lastValue < minInterval) minInterval = dotValue-lastValue;
+        lastValue = dotValue;
+    }
+    return minInterval;
+}
+
 - (CGFloat)getAverageValue {
     if ([self.delegate respondsToSelector:@selector(averageValueForLineGraph:)]) {
         return [self.delegate averageValueForLineGraph:self];
@@ -1822,14 +1832,13 @@ self.property = [coder decode ## type ##ForKey:@#property]; \
     } else {
         positionOnYAxis = (height - dotValue);
     }
-    
     return positionOnYAxis;
 }
 
 #pragma mark - Deprecated Methods
 
 
- - (NSNumber *)calculatePointValueSum {
+- (NSNumber *)calculatePointValueSum {
     [self printDeprecationTransitionWarningForOldMethod:@"calculatePointValueSum" replacementMethod:@"calculatePointValueSumOnGraph:" newObject:@"BEMGraphCalculator" sharedInstance:YES];
     return [[BEMGraphCalculator sharedCalculator] calculatePointValueSumOnGraph:self];
 }
